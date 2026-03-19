@@ -1,0 +1,187 @@
+import { ServerMsg } from '#shared/protocol.js';
+import type { WebSocket, WebSocketServer } from 'ws';
+import { BRICK_SIZE } from '../../constants.js';
+import { broadcastGame } from '../broadcast.js';
+import type { Lobby, LobbyRocket } from '../lobbyStore.js';
+import { lobbies } from '../lobbyStore.js';
+
+function runRocketExplosion(lobby: Lobby, rocket: LobbyRocket): void {
+    if (!lobby.gameStarted || rocket.exploded) return;
+    rocket.exploded = true;
+    lobby.rockets = lobby.rockets.filter((r) => r.id !== rocket.id);
+
+    const destroyedBricks: { x: number; y: number }[] = [];
+    const spawnedBoosts: { x: number; y: number; type: number; id: string }[] = [];
+    if (lobby.mapData?.bricks) {
+        for (let i = lobby.mapData.bricks.length - 1; i >= 0; i--) {
+            const b = lobby.mapData.bricks[i];
+            const cx = b.x + BRICK_SIZE / 2;
+            const cy = b.y + BRICK_SIZE / 2;
+            if (Math.hypot(cx - rocket.tx, cy - rocket.ty) < 90) {
+                destroyedBricks.push({ x: b.x, y: b.y });
+                lobby.mapData.bricks.splice(i, 1);
+                if (Math.random() < 0.5) {
+                    const bType = Math.floor(Math.random() * 6);
+                    const boost = {
+                        x: b.x + BRICK_SIZE / 2,
+                        y: b.y + BRICK_SIZE / 2,
+                        type: bType,
+                        id: `b_${Date.now()}${Math.random()}`,
+                    };
+                    lobby.boosts.push(boost);
+                    spawnedBoosts.push(boost);
+                }
+            }
+        }
+    }
+
+    broadcastGame(lobby, {
+        type: ServerMsg.EXPLOSION_EVENT,
+        x: rocket.tx,
+        y: rocket.ty,
+        radius: 90,
+        damage: 50,
+        ownerId: rocket.ownerId,
+        ownerTeam: rocket.ownerTeam,
+        rocketId: rocket.id,
+        destroyedBricks,
+        spawnedBoosts,
+    });
+
+    lobby.players.forEach((p) => {
+        if (p.lastPos && p.readyState === 1 && p.lastPos.hp > 0) {
+            const dist = Math.hypot(p.lastPos.x - rocket.tx, p.lastPos.y - rocket.ty);
+            if (dist < 90) {
+                p.send(
+                    JSON.stringify({
+                        type: ServerMsg.EXPLOSION_DAMAGE,
+                        damage: 50,
+                        x: rocket.tx,
+                        y: rocket.ty,
+                        rocketId: rocket.id,
+                    }),
+                );
+            }
+        }
+    });
+}
+
+export function handleDeployMine(_wss: WebSocketServer, ws: WebSocket, data: Record<string, unknown>): void {
+    const lobby = ws.lobbyId ? lobbies[ws.lobbyId] : undefined;
+    if (lobby?.gameStarted) {
+        const mine = {
+            mineId: Date.now() + Math.random(),
+            x: data.x as number,
+            y: data.y as number,
+            owner: ws.id!,
+            ownerTeam: ws.team,
+            triggered: false,
+        };
+        lobby.mines.push(mine);
+        broadcastGame(lobby, {
+            type: ServerMsg.DEPLOY_MINE,
+            x: data.x,
+            y: data.y,
+            ownerId: ws.id,
+            ownerTeam: ws.team,
+            mineId: mine.mineId,
+        });
+    }
+}
+
+export function handleLaunchRocket(_wss: WebSocketServer, ws: WebSocket, data: Record<string, unknown>): void {
+    const lobby = ws.lobbyId ? lobbies[ws.lobbyId] : undefined;
+    if (lobby?.gameStarted) {
+        const rocket: LobbyRocket = {
+            id: `r_${Date.now()}${Math.random()}`,
+            tx: data.tx as number,
+            ty: data.ty as number,
+            ownerId: ws.id!,
+            ownerTeam: ws.team,
+            startTime: Date.now(),
+            exploded: false,
+        };
+        lobby.rockets.push(rocket);
+
+        broadcastGame(lobby, {
+            type: ServerMsg.LAUNCH_ROCKET,
+            tx: data.tx,
+            ty: data.ty,
+            ownerId: ws.id,
+            ownerTeam: ws.team,
+            rocketId: rocket.id,
+        });
+
+        setTimeout(() => {
+            runRocketExplosion(lobby, rocket);
+        }, 2000);
+    }
+}
+
+export function handleBoostPickup(_wss: WebSocketServer, ws: WebSocket, data: Record<string, unknown>): void {
+    const lobby = ws.lobbyId ? lobbies[ws.lobbyId] : undefined;
+    if (lobby?.gameStarted) {
+        const idx = lobby.boosts.findIndex((b) => b.id === data.boostId);
+        if (idx !== -1) {
+            const boost = lobby.boosts[idx];
+            lobby.boosts.splice(idx, 1);
+            broadcastGame(lobby, {
+                type: ServerMsg.BOOST_PICKUP,
+                boostId: data.boostId as string,
+                x: boost.x,
+                y: boost.y,
+                playerId: ws.id!,
+            });
+        }
+    }
+}
+
+export function handleBricksDestroyBatch(_wss: WebSocketServer, ws: WebSocket, data: Record<string, unknown>): void {
+    if (!data.list || !Array.isArray(data.list)) return;
+    const lobby = ws.lobbyId ? lobbies[ws.lobbyId] : undefined;
+    if (lobby?.gameStarted && lobby.mapData) {
+        const spawnedBoosts: { x: number; y: number; type: number; id: string }[] = [];
+        const validBricks: { x: number; y: number }[] = [];
+        (data.list as { x: number; y: number }[]).forEach((brick) => {
+            const brickIndex = lobby.mapData!.bricks.findIndex((b) => b.x === brick.x && b.y === brick.y);
+            if (brickIndex !== -1) {
+                validBricks.push(brick);
+                lobby.mapData!.bricks.splice(brickIndex, 1);
+                if (Math.random() < 0.5) {
+                    const bType = Math.floor(Math.random() * 6);
+                    const boost = {
+                        x: brick.x + BRICK_SIZE / 2,
+                        y: brick.y + BRICK_SIZE / 2,
+                        type: bType,
+                        id: `b_${Date.now()}${Math.random()}`,
+                    };
+                    lobby.boosts.push(boost);
+                    spawnedBoosts.push(boost);
+                }
+            }
+        });
+        if (validBricks.length > 0) {
+            broadcastGame(lobby, {
+                type: ServerMsg.BRICKS_DESTROY_BATCH,
+                list: validBricks,
+                ownerId: ws.id,
+                ownerTeam: ws.team,
+                spawnedBoosts,
+                bulletId: data.bulletId,
+            });
+        }
+    }
+}
+
+export function handleDeploySmoke(_wss: WebSocketServer, ws: WebSocket, data: Record<string, unknown>): void {
+    const lobby = ws.lobbyId ? lobbies[ws.lobbyId] : undefined;
+    if (lobby?.gameStarted) {
+        broadcastGame(lobby, {
+            type: ServerMsg.DEPLOY_SMOKE,
+            x: data.x as number,
+            y: data.y as number,
+            ownerId: ws.id!,
+            ownerTeam: ws.team,
+        });
+    }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "tanks-warfare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "HTML5 Canvas tanks game — WebSocket server + Vite client",
+  "imports": {
+    "#shared/*": "./shared/dist/*"
+  },
+  "scripts": {
+    "dev": "concurrently -n client,server -c green,blue \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "npm run build:shared && vite --config client/vite.config.js",
+    "dev:server": "tsx watch --clear-screen=false server/index.ts",
+    "build:shared": "tsc -p shared/tsconfig.json",
+    "build:server": "tsc -p server/tsconfig.json",
+    "typecheck": "npm run build:shared && tsc --noEmit -p client/tsconfig.json && tsc --noEmit -p server/tsconfig.json",
+    "build": "npm run build:shared && npm run build:server && vite build --config client/vite.config.js",
+    "start": "node server/dist/index.js",
+    "preview": "vite preview --config client/vite.config.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "npm run build:shared && vitest run"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.13.10",
+    "@types/ws": "^8.18.1",
+    "concurrently": "^9.1.2",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.9.3",
+    "vite": "^6.2.0",
+    "vitest": "^3.2.4"
+  }
+}

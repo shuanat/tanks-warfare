@@ -1,0 +1,37 @@
+---
+description: Tanks — сервер Node, WebSocket, лобби, игровая логика
+globs: server/**/*
+alwaysApply: false
+---
+
+# Сервер (`server/`)
+
+## Вход и конфиг
+
+- Точка входа: `server/index.js` — поднимает HTTP + `WebSocketServer`.
+- Пути и порт: `server/config.js` (`dotenv`, `STATIC_ROOT`, `PORT`).
+
+## WebSocket
+
+- Сообщения обрабатываются в `server/ws/messageHandler.js` (или вынесенные хендлеры по плану рефакторинга).
+- Состояние лобби: `server/ws/lobbyStore.js` — объект `lobbies`; рассылка: `server/ws/broadcast.js`.
+- При добавлении типа сообщения — обновить клиентский обработчик и задокументировать контракт (см. `docs/REFACTORING_PLAN.md`).
+
+## HTTP
+
+- Статика: `server/http/staticHandler.js` — `/`, `/index.html`, `/assets/*` относительно `STATIC_ROOT`.
+
+## Игровая логика на сервере
+
+- Карта: `server/game/mapGenerator.js`.
+- Мины: `server/game/mine.js`.
+- Константы баланса, совпадающие с клиентом: `server/constants.js` — держать в синхроне с клиентом или готовить `shared/`.
+
+## Валидация и безопасность
+
+- Никнеймы/имена лобби: `server/utils/validation.js` (`sanitizeNick`, `sanitizeLobbyName`, `isValidColor`).
+- Не доверять сырым полям от клиента без проверки там, где от этого зависит честность игры или устойчивость сервера.
+
+## Стиль кода
+
+- ESM только (`import`/`export`); без CommonJS `require` в новых файлах сервера.

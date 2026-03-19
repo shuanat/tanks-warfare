@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<!-- Легаси: монолитный клиент. Актуальная сборка: client/ → npm run build → client/dist -->
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tanks: Warfare 3v3</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #menu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #4CAF50;
+            padding: 30px;
+            text-align: center;
+            z-index: 100;
+            border-radius: 10px;
+            width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        #lobby {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #2196F3;
+            padding: 20px;
+            text-align: center;
+            z-index: 100;
+            border-radius: 10px;
+            width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            display: none;
+        }
+
+        input,
+        button {
+            padding: 10px;
+            margin: 5px;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+
+        input {
+            background: #222;
+            color: #fff;
+            border: 1px solid #555;
+            text-align: center;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        button.ready-btn {
+            background: #2196F3;
+        }
+
+        button.ready-btn.ready {
+            background: #f44336;
+        }
+
+        h2 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+
+        .status {
+            color: #aaa;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .lobby-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #222;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+
+        .lobby-name {
+            font-weight: bold;
+        }
+
+        .lobby-players {
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .join-btn {
+            background: #2196F3;
+            padding: 5px 15px;
+        }
+
+        .color-picker {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+            margin: 10px 0;
+        }
+
+        .color-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .color-btn.selected {
+            border: 3px solid #ffeb3b;
+            transform: scale(1.15);
+        }
+
+        .player-slot {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #222;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .player-slot.team1 {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .player-slot.team2 {
+            border-left: 4px solid #f44336;
+        }
+
+        .player-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            flex-shrink: 0;
+        }
+
+        .lobby-teams {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+        }
+
+        .lobby-controls {
+            margin-top: 15px;
+            border-top: 1px solid #444;
+            padding-top: 15px;
+        }
+
+        .team-btn {
+            width: 100px;
+            margin: 3px;
+        }
+
+        .team-btn.t1 {
+            background: #4CAF50;
+        }
+
+        .team-btn.t2 {
+            background: #f44336;
+        }
+
+        #ui-game {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+        }
+
+        #volume-control {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            display: none;
+            z-index: 15;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        #volume-control input {
+            width: 100px;
+            vertical-align: middle;
+            cursor: pointer;
+        }
+
+        #score-board {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 32px;
+            font-weight: bold;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+        }
+
+        #boost-panel {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .boost-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .boost-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: none;
+        }
+
+        .boost-icon.circle {
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .overlay-msg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 60px;
+            font-weight: bold;
+            text-shadow: 2px 2px 10px #000;
+            display: none;
+            z-index: 20;
+            text-align: center;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="menu">
+        <h2>TANKS: WARFARE</h2>
+        <input type="text" id="nicknameInput" placeholder="Твой никнейм" maxlength="12">
+        <br>
+        <input type="text" id="lobbyNameInput" placeholder="Название лобби (макс. 30)" maxlength="30"
+            style="width:250px;">
+        <button id="btnCreate" onclick="createLobby()">➕ СОЗДАТЬ ЛОББИ</button>
+        <br><br>
+        <div style="text-align:left; font-size:14px; color:#aaa; margin:10px 0;">📋 Доступные лобби:</div>
+        <div id="lobbyList" style="max-height:200px; overflow-y:auto; text-align:left;"></div>
+        <br>
+        <input type="text" id="roomIdInput" placeholder="Или код лобби" style="width:150px;">
+        <button id="btnJoin" onclick="joinLobbyByCode()">🔗 ВОЙТИ ПО КОДУ</button>
+        <div id="status" class="status"></div>
+    </div>
+    <div id="lobby">
+        <h2>ЛОББИ: <span id="lobbyNameDisplay"></span></h2>
+        <div style="color:#ffeb3b; font-size:18px; margin:5px 0;">Код: <span id="roomCodeDisplay"></span></div>
+        <div style="margin:15px 0;">
+            <div style="font-size:14px; color:#aaa; margin-bottom:5px;">Твой никнейм:</div>
+            <input type="text" id="lobbyNickInput" maxlength="12" style="width:150px;">
+        </div>
+        <div style="margin:15px 0;">
+            <div style="font-size:14px; color:#aaa; margin-bottom:5px;">Цвет танка:</div>
+            <div class="color-picker" id="colorPicker"></div>
+        </div>
+        <div class="lobby-teams">
+            <div style="flex:1;">
+                <h3 style="color:#4CAF50; margin:5px 0;">🟢 Команда 1</h3>
+                <div id="team1-list"></div>
+            </div>
+            <div style="flex:1;">
+                <h3 style="color:#f44336; margin:5px 0;">🔴 Команда 2</h3>
+                <div id="team2-list"></div>
+            </div>
+        </div>
+        <div class="lobby-controls">
+            <button class="team-btn t1" onclick="setTeam(1)">В команду 1</button>
+            <button class="team-btn t2" onclick="setTeam(2)">В команду 2</button>
+            <br>
+            <button id="btnReady" class="ready-btn" onclick="toggleReady()">Готов</button>
+            <button id="btnStart" onclick="startGame()"
+                style="display:none; background:#ffeb3b; color:#000; margin-left:10px;">🎮 НАЧАТЬ БОЙ</button>
+        </div>
+        <div id="lobby-status" class="status"></div>
+    </div>
+    <div id="volume-control">🔊 <input type="range" min="0" max="100" value="100" id="volumeSlider"></div>
+    <div id="ui-game">
+        <span style="color:#4CAF50">WASD</span> Движение | <span style="color:#ffeb3b">Мышь</span> Огонь
+        <div style="margin-top:5px; font-size: 12px;">
+            <span style="color:#888; background:#444; padding:0 2px; border-radius:2px;">Q</span> Дым | <span
+                style="color:#f44336; font-weight:bold;">E</span> Мина | <span style="color:#ffeb3b">Space</span> Ракета
+        </div>
+    </div>
+    <div id="score-board"><span id="score-me" style="color:#4CAF50">0</span> - <span id="score-enemy"
+            style="color:#f44336">0</span></div>
+    <div id="boost-panel"></div>
+    <div id="victory-screen" class="overlay-msg">ПОБЕДА!</div>
+    <div id="death-screen" class="overlay-msg" style="color: #f44336;">УНИЧТОЖЕН</div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const SERVER_IP = '90.156.157.14';
+        const SERVER_PORT = '80';
+        const BRICK_SIZE = 80, MAX_SCORE = 5, TRACK_LIFETIME = 15000;
+        const MAP_WIDTH = 3200, MAP_HEIGHT = 1800, VIRTUAL_HEIGHT = 1080;
+        let scaleFactor = 1;
+        const MAX_SPEED_FORWARD = 225, MAX_SPEED_REVERSE = 112.5;
+        const ACCEL_FORWARD = 112.5, ACCEL_REVERSE = 112.5, BRAKE_POWER = 400, NATURAL_DRAG = 60;
+        const TURN_SPEED = 2.5, GRIP = 0.85;
+        const BASE_RELOAD_TIME = 1.0, BOOST_RELOAD_TIME = 0.7;
+        const BULLET_DAMAGE_BASE = 35, BULLET_DAMAGE_BOOST = 50, COLLISION_DAMAGE = 35;
+        const TURRET_ROTATION_SPEED = 120 * (Math.PI / 180);
+        const MINE_DAMAGE = 50, MINE_RADIUS = 90, ROCKET_DAMAGE = 50, ROCKET_RADIUS = 90, ROCKET_FLIGHT_TIME = 2.0;
+        const TANK_MAX_HP = 100, BOOST_DURATION = 10.0, BOOST_SPEED_DURATION = 20.0;
+        const SPAWN_IMMUNITY_TIME = 3.0;
+        const TANK_COLORS = ['#4CAF50', '#f44336', '#2196F3', '#FF9800', '#9C27B0', '#00BCD4', '#FFEB3B', '#E91E63', '#3F51B5', '#009688', '#FF5722', '#673AB7', '#8BC34A', '#795548', '#607D8B'];
+        let width, height, mapWidth = MAP_WIDTH, mapHeight = MAP_HEIGHT;
+        let ws = null, gameStarted = false, isHost = false, myId = null, myTeam = 1, myColor = '#4CAF50';
+        let lastTime = 0, biome = 0, trackSpawnDist = 0;
+        let audioCtx = null, myEngine = null, enemyEngine = null, masterGain = null;
+        let playerData = {};
+        let myNickname = 'Игрок', currentLobbyId = null;
+        let enemyTanks = {};
+        let tank = { x: 100, y: 100, angle: 0, turretAngle: 0, vx: 0, vy: 0, hp: TANK_MAX_HP, reload: 0, w: 75, h: 45, color: '#4CAF50', turretColor: '#388E3C', trackColor: '#1B5E20', damageBoostTimer: 0, speedBoostTimer: 0, collisionTimer: 0, smokeCount: 0, mineCount: 0, rocketCount: 0, isDead: false, spawnImmunityTimer: 0 };
+        let myScore = 0, enemyScore = 0;
+        let bulletCounter = 0;
+        const keys = {};
+        const bricks = [], bullets = [], particles = [], tracks = [], boosts = [], smokes = [], mines = [], rockets = [], explosions = [];
+        let cachedPatterns = { grassBase: null, perlinMask: null };
+
+        const assets = {
+            images: {
+                grassBase: new Image(),
+                grassOverlay: new Image(),
+                perlinMask: new Image(),
+                tankBase: new Image(),
+                tankTurret: new Image()
+            },
+            sounds: {
+                shoot: new Audio(),
+                hit: new Audio(),
+                explosion: new Audio(),
+                brickHit: new Audio()
+            },
+            loaded: false
+        };
+
+        assets.images.grassBase.src = '/assets/images/grass_base.png';
+        assets.images.grassOverlay.src = '/assets/images/grass_overlay.png';
+        assets.images.perlinMask.src = '/assets/images/perlin_mask.png';
+        assets.images.tankBase.src = '/assets/images/tank_base_green.png';
+        assets.images.tankTurret.src = '/assets/images/tank_turret_green.png';
+        assets.sounds.shoot.src = '/assets/sounds/shoot.mp3';
+        assets.sounds.hit.src = '/assets/sounds/hit.mp3';
+        assets.sounds.explosion.src = '/assets/sounds/explosion.mp3';
+        assets.sounds.brickHit.src = '/assets/sounds/brick_hit.mp3';
+
+        let assetsLoadedCount = 0;
+        const totalAssets = 9;
+
+        function checkAssetsLoaded() {
+            assetsLoadedCount++;
+            if (assetsLoadedCount >= totalAssets) {
+                assets.loaded = true;
+                console.log('✅ Все ассеты загружены');
+            }
+        }
+
+        Object.values(assets.images).forEach(img => {
+            img.onload = checkAssetsLoaded;
+            img.onerror = () => { console.warn('Не загрузилось изображение:', img.src); checkAssetsLoaded(); };
+        });
+
+        Object.values(assets.sounds).forEach(audio => {
+            audio.addEventListener('canplaythrough', checkAssetsLoaded);
+            audio.addEventListener('error', () => { console.warn('Не загрузился звук:', audio.src); checkAssetsLoaded(); });
+            audio.preload = 'auto';
+            audio.load();
+        });
+
+        function getNickname() {
+            const inputNick = document.getElementById('nicknameInput').value.trim();
+            if (inputNick) { sessionStorage.setItem('tank_nickname_session', inputNick); return sanitize(inputNick, 12); }
+            let nick = sessionStorage.getItem('tank_nickname_session');
+            if (!nick) { nick = 'Игрок' + Math.floor(Math.random() * 1000); sessionStorage.setItem('tank_nickname_session', nick); }
+            return sanitize(nick, 12);
+        }
+        function sanitize(str, maxLen) {
+            return str.substring(0, maxLen).replace(/[^a-zA-Z0-9_а-яА-Я]/g, '') || 'Игрок';
+        }
+        window.addEventListener('load', () => {
+            const nickInput = document.getElementById('nicknameInput');
+            if (nickInput) nickInput.value = sessionStorage.getItem('tank_nickname_session') || '';
+            initColorPicker();
+            updateLobbyListUI([]);
+            connect();
+        });
+        function initColorPicker() {
+            const picker = document.getElementById('colorPicker');
+            picker.innerHTML = '';
+            TANK_COLORS.forEach(color => {
+                const btn = document.createElement('div');
+                btn.className = 'color-btn' + (color === myColor ? ' selected' : '');
+                btn.style.background = color;
+                btn.onclick = () => selectColor(color);
+                picker.appendChild(btn);
+            });
+        }
+        function selectColor(color) {
+            myColor = color;
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
+            event.target.classList.add('selected');
+            if (ws && ws.readyState === 1 && currentLobbyId) {
+                ws.send(JSON.stringify({ type: 'update_player', color: color }));
+            }
+        }
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (!masterGain) { masterGain = audioCtx.createGain(); masterGain.connect(audioCtx.destination); updateVolume(); }
+        }
+        function updateVolume() {
+            if (!masterGain) return;
+            masterGain.gain.setValueAtTime(document.getElementById('volumeSlider').value / 100, audioCtx.currentTime);
+        }
+        document.getElementById('volumeSlider').addEventListener('input', updateVolume);
+
+        function playSound_Shot(vol = 1) {
+            const s = assets.sounds.shoot.cloneNode();
+            s.volume = vol;
+            s.load();
+            s.play().catch(() => { });
+        }
+        function playSound_Hit() {
+            const s = assets.sounds.hit.cloneNode();
+            s.load();
+            s.play().catch(() => { });
+        }
+        function playSound_Explosion() {
+            const s = assets.sounds.explosion.cloneNode();
+            s.load();
+            s.play().catch(() => { });
+        }
+        function playSound_BrickHit(vol = 1) {
+            const s = assets.sounds.brickHit.cloneNode();
+            s.volume = vol;
+            s.load();
+            s.play().catch(() => { });
+        }
+        function playSound_Heal() { for (let i = 0; i < 3; i++)setTimeout(() => tone(500 + i * 150, 0.06, 'sine', 0.1), i * 40); }
+        function playSound_Speed() { for (let i = 0; i < 5; i++)setTimeout(() => tone(300 + i * 100, 0.04, 'square', 0.08), i * 20); }
+        function playSound_Damage() { tone(300, 0.05, 'triangle', 0.15); setTimeout(() => tone(150, 0.1, 'sawtooth', 0.2), 50); }
+        function playSound_Smoke() { noise(0.5, 100, 1, 0.2, 'lowpass', 0.2); tone(100, 0.3, 'sine', 0.1); }
+        function playBombBeep() { for (let i = 0; i < 5; i++)tone(1500, 0.05, 'square', 0.15, null, i * 0.1); }
+        function playAlert() { tone(880, 0.2, 'sawtooth', 0.15); tone(880, 0.2, 'sawtooth', 0.1, null, 0.25); }
+        function playRocketFlyBy() { if (!audioCtx) return; const len = audioCtx.sampleRate * 2, buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate), data = buf.getChannelData(0); for (let i = 0; i < len; i++)data[i] = Math.random() * 2 - 1; const src = audioCtx.createBufferSource(); src.buffer = buf; const flt = audioCtx.createBiquadFilter(); flt.type = 'bandpass'; flt.frequency.value = 1200; flt.Q.value = 2; const g = audioCtx.createGain(); g.gain.setValueAtTime(0.001, audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 1); g.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 2); src.connect(flt); flt.connect(g); g.connect(masterGain); src.start(); src.stop(audioCtx.currentTime + 2); }
+        function playSound_Victory() { const m = [{ f: 523, t: 0 }, { f: 523, t: 100 }, { f: 659, t: 200 }, { f: 784, t: 350 }, { f: 659, t: 500 }, { f: 784, t: 650 }, { f: 1047, t: 800 }]; m.forEach(n => setTimeout(() => { tone(n.f, 0.4, 'square', 0.1); tone(n.f * 0.5, 0.4, 'triangle', 0.08); }, n.t)); }
+        function playSound_StartMusic() { const n = [{ f: 262, d: 0.12 }, { f: 330, d: 0.12 }, { f: 392, d: 0.12 }, { f: 523, d: 0.25 }, { f: 392, d: 0.12 }, { f: 523, d: 0.35 }]; let t = 0; n.forEach(x => { setTimeout(() => { tone(x.f, x.d, 'square', 0.12); tone(x.f * 0.5, x.d, 'triangle', 0.08); }, t); t += x.d * 1000; }); }
+
+        function noise(d, f, q, v, t, dec) { if (!audioCtx) return; const len = audioCtx.sampleRate * d, buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate), data = buf.getChannelData(0); for (let i = 0; i < len; i++)data[i] = Math.random() * 2 - 1; const src = audioCtx.createBufferSource(); src.buffer = buf; const flt = audioCtx.createBiquadFilter(); flt.type = t; flt.frequency.value = f; flt.Q.value = q; const g = audioCtx.createGain(); g.gain.setValueAtTime(v, audioCtx.currentTime); g.gain.setTargetAtTime(0.001, audioCtx.currentTime, dec); src.connect(flt); flt.connect(g); g.connect(masterGain); src.start(); src.stop(audioCtx.currentTime + d); }
+        function tone(f, d, t, v, s = null, delay = 0) { if (!audioCtx) return; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime + delay); if (s) o.frequency.setTargetAtTime(s, audioCtx.currentTime + delay, d * 0.4); g.gain.setValueAtTime(v, audioCtx.currentTime + delay); g.gain.setTargetAtTime(0.001, audioCtx.currentTime + delay, d * 0.5); o.connect(g); g.connect(masterGain); o.start(audioCtx.currentTime + delay); o.stop(audioCtx.currentTime + delay + d); }
+
+        class TankEngine {
+            constructor(ctx, isEnemy) { this.ctx = ctx; this.isEnemy = isEnemy; this.rpm = 600; this.targetRPM = 600; this.variant = { baseFreq: 32, harmonics: [1, 0.7, 0.5, 0.3, 0.15, 0.08], trackNoise: 0.18, rpmMin: 600, rpmMax: 2200 }; this.nodes = null; }
+            start() { const master = this.ctx.createGain(); master.gain.value = this.isEnemy ? 0 : 0.2; master.connect(masterGain); const oscs = []; this.variant.harmonics.forEach((amp, i) => { const h = i + 1, osc = this.ctx.createOscillator(), gain = this.ctx.createGain(), flt = this.ctx.createBiquadFilter(); osc.type = h === 1 ? 'sawtooth' : 'triangle'; osc.frequency.value = this.variant.baseFreq * h; flt.type = 'lowpass'; flt.frequency.value = 200 + h * 50; gain.gain.value = amp * 0.12; osc.connect(flt); flt.connect(gain); gain.connect(master); osc.start(); oscs.push({ osc, gain, filter: flt, baseFreq: this.variant.baseFreq * h, baseAmp: amp }); }); const bufSize = this.ctx.sampleRate * 2, buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate), noise = buf.getChannelData(0); for (let i = 0; i < bufSize; i++)noise[i] = Math.random() * 2 - 1; const trackSrc = this.ctx.createBufferSource(); trackSrc.buffer = buf; trackSrc.loop = true; const trackFlt = this.ctx.createBiquadFilter(); trackFlt.type = 'bandpass'; trackFlt.frequency.value = 100; trackFlt.Q.value = 2; const trackGain = this.ctx.createGain(); trackGain.gain.value = this.variant.trackNoise * 0.2; const lfo = this.ctx.createOscillator(), lfoGain = this.ctx.createGain(); lfo.frequency.value = 6; lfoGain.gain.value = 20; lfo.connect(lfoGain); lfoGain.connect(trackFlt.frequency); lfo.start(); trackSrc.connect(trackFlt); trackFlt.connect(trackGain); trackGain.connect(master); trackSrc.start(); this.nodes = { master, oscs, trackFlt, trackGain, lfo }; }
+            update(dt, speedRatio, distFactor) { if (!this.nodes) return; if (this.isEnemy) { const tv = 0.2 * distFactor; this.nodes.master.gain.setTargetAtTime(tv, this.ctx.currentTime, 0.1); } this.targetRPM = this.variant.rpmMin + (this.variant.rpmMax - this.variant.rpmMin) * speedRatio; const step = (this.variant.rpmMax - this.variant.rpmMin) * dt * 2; if (this.rpm < this.targetRPM) this.rpm = Math.min(this.rpm + step, this.targetRPM); else this.rpm = Math.max(this.rpm - step * 0.8, this.targetRPM); const norm = (this.rpm - this.variant.rpmMin) / (this.variant.rpmMax - this.variant.rpmMin), factor = 0.8 + norm * 0.25; this.nodes.oscs.forEach((o, i) => { o.osc.frequency.setTargetAtTime(o.baseFreq * factor, this.ctx.currentTime, 0.02); o.gain.gain.setTargetAtTime(o.baseAmp * 0.12 * (0.6 + norm * 0.4), this.ctx.currentTime, 0.02); o.filter.frequency.setTargetAtTime(200 + (i + 1) * 50 + norm * 150, this.ctx.currentTime, 0.05); }); this.nodes.trackFlt.frequency.setTargetAtTime(100 + norm * 120, this.ctx.currentTime, 0.05); this.nodes.trackGain.gain.setTargetAtTime(this.variant.trackNoise * 0.2 * (0.5 + norm * 0.5), this.ctx.currentTime, 0.02); this.nodes.lfo.frequency.setTargetAtTime(6 + norm * 8, this.ctx.currentTime, 0.05); }
+        }
+
+        function connect() {
+            setStatus("Подключение...");
+            ws = new WebSocket(`ws://${SERVER_IP}:${SERVER_PORT}`);
+            ws.onopen = () => { setStatus(""); };
+            ws.onmessage = (e) => handleData(JSON.parse(e.data));
+            ws.onerror = (e) => { console.error("WS Error", e); setStatus("Ошибка сети"); };
+            ws.onclose = () => { if (gameStarted) location.reload(); else setStatus("Отключено"); };
+        }
+        function send(d) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(d)); }
+
+        function handleData(d) {
+            if (d.type === 'lobby_list') { updateLobbyListUI(d.lobbies); return; }
+            if (d.type === 'lobby_created') {
+                myId = d.playerId; myNickname = d.nickname; myColor = d.color; myTeam = d.team;
+                isHost = d.isHost; currentLobbyId = d.lobbyId;
+                showLobby(d.lobbyId, d.name || 'Лобби', isHost);
+                playerData[myId] = { nick: myNickname, team: myTeam, color: myColor };
+                return;
+            }
+            if (d.type === 'lobby_joined') {
+                myId = d.playerId; myNickname = d.nickname; myColor = d.color; myTeam = d.team;
+                isHost = d.isHost; currentLobbyId = d.lobbyId;
+                showLobby(d.lobbyId, null, isHost);
+                playerData[myId] = { nick: myNickname, team: myTeam, color: myColor };
+                return;
+            }
+            if (d.type === 'lobby_state') {
+                updateLobbyPlayers(d.players);
+                document.getElementById('lobbyNameDisplay').innerText = d.name || 'Лобби';
+                if (d.players.find(p => p.id === myId)) {
+                    const me = d.players.find(p => p.id === myId);
+                    document.getElementById('btnReady').innerText = me.ready ? 'Не готов' : 'Готов';
+                    document.getElementById('btnReady').classList.toggle('ready', me.ready);
+                }
+                return;
+            }
+            if (d.type === 'start') {
+                initAudio();
+                if (!myEngine) { myEngine = new TankEngine(audioCtx, false); myEngine.start(); }
+                if (!enemyEngine) { enemyEngine = new TankEngine(audioCtx, true); enemyEngine.start(); }
+                myTeam = d.team; myColor = d.color;
+                (d.allPlayers || []).forEach(p => playerData[p.id] = { nick: p.nick, team: p.team, color: p.color });
+                if (d.map) { bricks.length = 0; d.map.bricks.forEach(b => bricks.push(b)); biome = d.map.biome; mapWidth = d.map.w; mapHeight = d.map.h; }
+                startGameClient();
+                return;
+            }
+            if (d.type === 'score_update') { myScore = d.scores[myTeam] || 0; enemyScore = d.scores[myTeam === 1 ? 2 : 1] || 0; updateUI(); return; }
+            if (d.type === 'game_over') {
+                const win = d.winner === myTeam;
+                const draw = d.winner === 0;
+                document.getElementById('death-screen').style.display = 'none';
+                document.getElementById('victory-screen').innerText = draw ? "НИЧЬЯ!" : (win ? "ПОБЕДА!" : "ПОРАЖЕНИЕ");
+                document.getElementById('victory-screen').style.color = draw ? "#ffeb3b" : (win ? "#ffeb3b" : "#f44336");
+                if (win) playSound_Victory();
+                document.getElementById('victory-screen').style.display = 'block';
+                return;
+            }
+            if (d.type === 'player_died') {
+                if (d.playerId !== myId) {
+                    if (enemyTanks[d.playerId]) {
+                        enemyTanks[d.playerId].hp = 0;
+                        enemyTanks[d.playerId].spawnImmunityTimer = SPAWN_IMMUNITY_TIME;
+                        spawnParticles(enemyTanks[d.playerId].x, enemyTanks[d.playerId].y, '#ffeb3b', 20);
+                        playSound_Explosion();
+                    }
+                } else {
+                    document.getElementById('death-screen').style.display = 'block';
+                    tank.hp = 0;
+                    tank.isDead = true;
+                    spawnParticles(tank.x, tank.y, '#f44336', 20);
+                    playSound_Explosion();
+                    setTimeout(spawnMyTank, 2000);
+                }
+                return;
+            }
+            if (d.type === 'collision_hit') {
+                if (tank.collisionTimer <= 0.2) {
+                    if (tank.spawnImmunityTimer <= 0) { tank.hp -= COLLISION_DAMAGE; }
+                    spawnParticles(tank.x, tank.y, '#fff', 10);
+                    playSound_Hit();
+                    tank.collisionTimer = 1;
+                    if (tank.hp <= 0 && !tank.isDead) { send({ type: 'death' }); tank.isDead = true; }
+                }
+                return;
+            }
+            if (d.type === 'bullet_hit' && d.targetId === myId) {
+                if (tank.spawnImmunityTimer <= 0) { tank.hp -= d.damage; }
+                spawnParticles(tank.x, tank.y, '#f44336', 5);
+                playSound_Hit();
+                if (d.bulletId) {
+                    const bi = bullets.findIndex(b => b.bulletId === d.bulletId);
+                    if (bi !== -1) bullets.splice(bi, 1);
+                }
+                if (tank.hp <= 0 && !tank.isDead) { send({ type: 'death' }); tank.isDead = true; }
+                return;
+            }
+            if (d.type === 'bullet_hit' && d.targetId !== myId) {
+                playSound_Hit();
+                return;
+            }
+            if (d.type === 'bullet_remove') {
+                const bi = bullets.findIndex(b => b.bulletId === d.bulletId);
+                if (bi !== -1) bullets.splice(bi, 1);
+                return;
+            }
+            if (d.type === 'bullet_hit_visual') {
+                spawnParticles(d.hitX, d.hitY, '#ffeb3b', 3);
+                return;
+            }
+            if (d.type === 'explosion_event') {
+                createExplosion(d.x, d.y, d.radius);
+                if (d.destroyedBricks && d.destroyedBricks.length > 0) {
+                    d.destroyedBricks.forEach(brick => {
+                        const i = bricks.findIndex(b => b.x === brick.x && b.y === brick.y);
+                        if (i !== -1) { bricks.splice(i, 1); spawnParticles(brick.x + BRICK_SIZE / 2, brick.y + BRICK_SIZE / 2, '#8b4513', 3); }
+                    });
+                }
+                if (d.spawnedBoosts && d.spawnedBoosts.length > 0) {
+                    d.spawnedBoosts.forEach(boost => { boosts.push({ x: boost.x, y: boost.y, type: boost.type, id: boost.id }); });
+                }
+                return;
+            }
+            if (d.type === 'explosion_damage') {
+                if (tank.spawnImmunityTimer <= 0) { tank.hp -= d.damage; }
+                spawnParticles(tank.x, tank.y, '#f44336', 10);
+                playSound_Hit();
+                if (tank.hp <= 0 && !tank.isDead) { send({ type: 'death' }); tank.isDead = true; }
+                return;
+            }
+            if (d.type === 'deploy_smoke') { createSmokeCloud(d.x, d.y); return; }
+            if (d.type === 'deploy_mine') {
+                mines.push({ x: d.x, y: d.y, owner: d.ownerId, ownerTeam: d.ownerTeam, mineId: d.mineId, triggered: false });
+                return;
+            }
+            if (d.type === 'mine_triggered') { playBombBeep(); const m = mines.find(x => x.mineId === d.mineId); if (m) m.triggered = true; return; }
+            if (d.type === 'mine_removed') { const i = mines.findIndex(x => x.mineId === d.mineId); if (i !== -1) mines.splice(i, 1); return; }
+            if (d.type === 'launch_rocket') {
+                rockets.push({ x: d.tx, y: d.ty - 2000, sx: d.tx, sy: d.ty - 2000, tx: d.tx, ty: d.ty, owner: d.ownerId, ownerTeam: d.ownerTeam, startTime: performance.now(), duration: ROCKET_FLIGHT_TIME * 1000 });
+                playAlert();
+                if (d.ownerId !== myId) playRocketFlyBy();
+                return;
+            }
+            if (d.type === 'bricks_destroy_batch' && d.list) {
+                d.list.forEach(brick => {
+                    const i = bricks.findIndex(b => b.x === brick.x && b.y === brick.y);
+                    if (i !== -1) { bricks.splice(i, 1); spawnParticles(brick.x + BRICK_SIZE / 2, brick.y + BRICK_SIZE / 2, '#8b4513', 3); }
+                });
+                if (d.bulletId) {
+                    const bi = bullets.findIndex(b => b.bulletId === d.bulletId);
+                    if (bi !== -1) bullets.splice(bi, 1);
+                }
+                if (d.spawnedBoosts && d.spawnedBoosts.length > 0) {
+                    d.spawnedBoosts.forEach(boost => { boosts.push({ x: boost.x, y: boost.y, type: boost.type, id: boost.id }); });
+                }
+                return;
+            }
+            if (d.type === 'restart_match') { if (d.map) { bricks.length = 0; d.map.bricks.forEach(b => bricks.push(b)); biome = d.map.biome; } resetMatch(); return; }
+            if (d.type === 'boost_spawn') { boosts.push({ x: d.x, y: d.y, type: d.bType, id: d.id }); return; }
+            if (d.type === 'boost_pickup') {
+                const i = boosts.findIndex(b => b.id === d.boostId);
+                if (i !== -1) boosts.splice(i, 1);
+                return;
+            }
+            if (d.type === 'state' && d.id !== myId) {
+                if (!enemyTanks[d.id]) {
+                    enemyTanks[d.id] = { ...tank, x: d.x, y: d.y, id: d.id, team: d.team, color: playerData[d.id]?.color || '#f44336', spawnImmunityTimer: d.spawnImmunityTimer || SPAWN_IMMUNITY_TIME };
+                }
+                const et = enemyTanks[d.id];
+                if (d.vx !== undefined) et.vx = d.vx; if (d.vy !== undefined) et.vy = d.vy; if (d.hp !== undefined) et.hp = d.hp;
+                if (d.spawnImmunityTimer !== undefined) et.spawnImmunityTimer = d.spawnImmunityTimer;
+                et.team = d.team;
+                let dx = d.x - et.x, dy = d.y - et.y, dist = Math.hypot(dx, dy); trackSpawnDist += dist;
+                if (trackSpawnDist > 8 && et.hp > 0) { let off = 10, a = d.angle; addTrack(d.x - Math.cos(a + Math.PI / 2) * off, d.y - Math.sin(a + Math.PI / 2) * off, a); addTrack(d.x - Math.cos(a - Math.PI / 2) * off, d.y - Math.sin(a - Math.PI / 2) * off, a); trackSpawnDist = 0; }
+                et.x = d.x; et.y = d.y; et.angle = d.angle; et.turretAngle = d.turretAngle;
+                return;
+            }
+            if (d.type === 'bullet') {
+                bullets.push({ bulletId: d.bulletId, x: d.x, y: d.y, vx: d.vx, vy: d.vy, ownerId: d.ownerId, ownerTeam: d.ownerTeam, damage: d.damage || BULLET_DAMAGE_BASE });
+                if (d.ownerId !== myId) playSound_Shot(getVolumeByDistance(d.x, d.y));
+                spawnParticles(d.x, d.y, '#ffeb3b', 5);
+                return;
+            }
+        }
+
+        function createLobby() {
+            const nick = getNickname(), name = document.getElementById('lobbyNameInput').value.trim() || 'Лобби';
+            myNickname = nick;
+            connect();
+            setTimeout(() => send({ type: 'create_lobby', nickname: nick, lobbyName: name, color: myColor }), 300);
+        }
+        function joinLobbyByCode() {
+            const code = document.getElementById('roomIdInput').value.trim();
+            if (!code) return alert("Введи код");
+            const nick = getNickname(); myNickname = nick;
+            connect();
+            setTimeout(() => send({ type: 'join_lobby', lobbyId: code, nickname: nick, color: myColor }), 300);
+        }
+        function joinLobby(id) {
+            const nick = getNickname(); myNickname = nick;
+            connect();
+            setTimeout(() => send({ type: 'join_lobby', lobbyId: id, nickname: nick, color: myColor }), 300);
+        }
+        function showLobby(id, name, isHost) {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('lobby').style.display = 'block';
+            document.getElementById('roomCodeDisplay').innerText = id;
+            document.getElementById('lobbyNameDisplay').innerText = name || 'Лобби';
+            document.getElementById('btnStart').style.display = isHost ? 'inline-block' : 'none';
+            document.getElementById('lobbyNickInput').value = myNickname;
+            document.getElementById('lobbyNickInput').oninput = (e) => {
+                myNickname = sanitize(e.target.value, 12);
+                if (ws && ws.readyState === 1) send({ type: 'update_player', nickname: myNickname });
+            };
+            initColorPicker();
+        }
+        function updateLobbyListUI(lobbies) {
+            const list = document.getElementById('lobbyList');
+            if (lobbies.length === 0) { list.innerHTML = '<div style="color:#666;font-style:italic">Нет активных лобби</div>'; return; }
+            list.innerHTML = lobbies.map(l => `<div class="lobby-item"><span class="lobby-name">${l.name}</span><span class="lobby-players">${l.players}/${l.max}</span><button class="join-btn" onclick="joinLobby('${l.id}')">▶</button></div>`).join('');
+        }
+        function updateLobbyPlayers(players) {
+            const t1 = document.getElementById('team1-list'), t2 = document.getElementById('team2-list');
+            t1.innerHTML = ''; t2.innerHTML = '';
+            players.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'player-slot team' + p.team;
+                div.innerHTML = `<div class="player-color" style="background:${p.color}"></div><strong>${p.nick}</strong>${p.isHost ? ' 👑' : ''}`;
+                (p.team === 1 ? t1 : t2).appendChild(div);
+                playerData[p.id] = { nick: p.nick, team: p.team, color: p.color };
+                if (p.id === myId) { myTeam = p.team; myColor = p.color; }
+            });
+        }
+        function setTeam(team) { send({ type: 'change_team', team }); }
+        function toggleReady() { send({ type: 'toggle_ready' }); }
+        function startGame() { send({ type: 'start_game' }); }
+        function getVolumeByDistance(tx, ty) { const d = Math.hypot(tank.x - tx, tank.y - ty); return Math.max(0, 1 - d / 1200); }
+
+        function startGameClient() {
+            document.getElementById('lobby').style.display = 'none';
+            document.getElementById('ui-game').style.display = 'block';
+            document.getElementById('score-board').style.display = 'block';
+            document.getElementById('volume-control').style.display = 'block';
+            document.getElementById('boost-panel').style.display = 'flex';
+            resize(); gameStarted = true; lastTime = performance.now();
+            playSound_StartMusic(); setTimeout(spawnMyTank, 500);
+            requestAnimationFrame(loop);
+        }
+
+        function resetMatch() {
+            myScore = 0; enemyScore = 0; updateUI();
+            document.getElementById('victory-screen').style.display = 'none';
+            document.getElementById('death-screen').style.display = 'none';
+            tracks.length = 0; particles.length = 0; boosts.length = 0; smokes.length = 0; mines.length = 0; rockets.length = 0; explosions.length = 0;
+            tank.hp = TANK_MAX_HP; tank.isDead = false; tank.damageBoostTimer = 0; tank.speedBoostTimer = 0; tank.vx = 0; tank.vy = 0; tank.collisionTimer = 0;
+            tank.smokeCount = 0; tank.mineCount = 0; tank.rocketCount = 0;
+            for (let id in enemyTanks) { enemyTanks[id].hp = TANK_MAX_HP; enemyTanks[id].vx = 0; enemyTanks[id].vy = 0; enemyTanks[id].spawnImmunityTimer = SPAWN_IMMUNITY_TIME; }
+            playSound_StartMusic(); setTimeout(spawnMyTank, 500);
+        }
+
+        function spawnMyTank() {
+            bullets.length = 0; tank.hp = TANK_MAX_HP; tank.isDead = false; tank.reload = 0; tank.vx = 0; tank.vy = 0;
+            tank.damageBoostTimer = 0; tank.speedBoostTimer = 0; tank.collisionTimer = 0; tank.smokeCount = 0; tank.mineCount = 0; tank.rocketCount = 0;
+            tank.spawnImmunityTimer = SPAWN_IMMUNITY_TIME;
+            document.getElementById('death-screen').style.display = 'none'; updateInventoryUI();
+            tank.color = myColor;
+            tank.turretColor = shadeColor(myColor, -20);
+            tank.trackColor = shadeColor(myColor, -40);
+            let sectorW = mapWidth / 4, spawnW = sectorW - 50, sx, sy;
+            if (myTeam === 1) { sx = Math.random() * spawnW + 50; sy = Math.random() * (mapHeight - 100) + 50; tank.angle = 0; }
+            else { sx = mapWidth - (Math.random() * spawnW + 50); sy = Math.random() * (mapHeight - 100) + 50; tank.angle = Math.PI; }
+            let valid = findSpawnSpot(sx, sy); tank.x = valid.x; tank.y = valid.y;
+        }
+
+        function shadeColor(col, amt) { let usePound = false; if (col[0] === "#") { col = col.slice(1); usePound = true; } let num = parseInt(col, 16); let r = (num >> 16) + amt, b = ((num >> 8) & 0x00FF) + amt, g = (num & 0x0000FF) + amt; return (usePound ? "#" : "") + (r > 255 ? 255 : r < 0 ? 0 : r).toString(16).padStart(2, '0') + (b > 255 ? 255 : b < 0 ? 0 : b).toString(16).padStart(2, '0') + (g > 255 ? 255 : g < 0 ? 0 : g).toString(16).padStart(2, '0'); }
+        function findSpawnSpot(x, y) { if (checkCollision(x, y, 20) === -1) return { x, y }; for (let r = 50; r < 300; r += 50)for (let a = 0; a < Math.PI * 2; a += 0.5) { let nx = x + Math.cos(a) * r, ny = y + Math.sin(a) * r; if (checkCollision(nx, ny, 20) === -1) return { x: nx, y: ny }; } return { x, y }; }
+        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; scaleFactor = height / VIRTUAL_HEIGHT; }
+        function checkCollision(x, y, size) { if (x - size < 0 || x + size > mapWidth || y - size < 0 || y + size > mapHeight) return -2; for (let i = 0; i < bricks.length; i++) { let b = bricks[i]; if (x + size > b.x && x - size < b.x + BRICK_SIZE && y + size > b.y && y - size < b.y + BRICK_SIZE) return i; } return -1; }
+
+        function spawnParticles(x, y, color, count, type = 'spark') {
+            for (let i = 0; i < count; i++) {
+                let p = { x, y, vx: (Math.random() - 0.5) * 200, vy: (Math.random() - 0.5) * 200, life: 0.5, color, size: Math.random() * 3 + 2, type };
+                if (type === 'smoke') { p.vx = (Math.random() - 0.5) * 20; p.vy = -Math.random() * 20 - 10; p.life = 1; p.size = Math.random() * 5 + 5; p.color = `rgba(150,150,150,0.5)`; }
+                if (type === 'dark_smoke') { p.vx = (Math.random() - 0.5) * 50; p.vy = -Math.random() * 30 - 20; p.life = 2; p.size = Math.random() * 15 + 10; p.color = `rgba(30,30,30,0.7)`; }
+                if (type === 'fire_smoke') { p.vx = (Math.random() - 0.5) * 40; p.vy = -Math.random() * 40 - 20; p.life = 1.5; p.size = Math.random() * 8 + 8; p.color = `rgba(50,50,50,0.6)`; }
+                if (type === 'spark_fire') { p.vx = (Math.random() - 0.5) * 300; p.vy = -Math.random() * 300 - 100; p.life = 0.4; p.size = Math.random() * 2 + 1; p.color = `rgba(255,100,0,0.9)`; }
+                if (type === 'dirt') { p.life = 0.3; p.size = Math.random() * 2 + 1; }
+                if (type === 'muzzle') { p.life = 0.1; p.size = Math.random() * 4 + 2; }
+                particles.push(p);
+            }
+        }
+        function addTrack(x, y, angle) { tracks.push({ x, y, angle, time: performance.now() }); }
+
+        function updateBoosts(dt) {
+            for (let i = boosts.length - 1; i >= 0; i--) {
+                let b = boosts[i];
+                if (tank.hp > 0 && Math.hypot(b.x - tank.x, b.y - tank.y) < 20) {
+                    applyBoost(b.type);
+                    send({ type: 'boost_pickup', boostId: b.id, x: b.x, y: b.y });
+                    boosts.splice(i, 1);
+                }
+            }
+        }
+
+        function applyBoost(type) {
+            if (type === 0) { tank.hp = Math.min(TANK_MAX_HP, tank.hp + 50); spawnParticles(tank.x, tank.y, '#4CAF50', 10); playSound_Heal(); }
+            else if (type === 1) { tank.damageBoostTimer += BOOST_DURATION; spawnParticles(tank.x, tank.y, '#ffeb3b', 10); playSound_Damage(); }
+            else if (type === 2) { tank.speedBoostTimer += BOOST_SPEED_DURATION; spawnParticles(tank.x, tank.y, '#2196F3', 10); playSound_Speed(); }
+            else if (type === 3) { tank.smokeCount++; spawnParticles(tank.x, tank.y, '#9C27B0', 10); playSound_Heal(); }
+            else if (type === 4) { tank.mineCount++; spawnParticles(tank.x, tank.y, '#333', 10); playSound_Heal(); }
+            else if (type === 5) { tank.rocketCount++; spawnParticles(tank.x, tank.y, '#ffeb3b', 10); playSound_Heal(); }
+            updateInventoryUI();
+        }
+
+        function createSmokeCloud(x, y) {
+            let cloud = { x, y, time: 0, particles: [] };
+            for (let i = 0; i < 40; i++) { let a = Math.random() * Math.PI * 2, d = Math.random() * 150; cloud.particles.push({ ox: Math.cos(a) * d, oy: Math.sin(a) * d, size: 30 + Math.random() * 40, alpha: 0 }); }
+            smokes.push(cloud);
+        }
+        function createExplosion(x, y, radius) { explosions.push({ x, y, radius, time: 0, maxTime: 0.3 }); spawnParticles(x, y, '#333', 30, 'dark_smoke'); playSound_Explosion(); }
+
+        function updateInventoryUI() {
+            let html = '';
+            html += `<div class="boost-indicator"><div class="boost-icon" style="background:#888;border:1px solid #fff;"></div>Дым: ${tank.smokeCount}</div>`;
+            html += `<div class="boost-indicator"><div class="boost-icon" style="background:#2e4634;border:1px solid #fff;"></div>Мины: ${tank.mineCount}</div>`;
+            html += `<div class="boost-indicator"><div class="boost-icon" style="background:#ffeb3b;border:1px solid #f44336;"></div>Ракеты: ${tank.rocketCount}</div>`;
+            if (tank.damageBoostTimer > 0) html += `<div class="boost-indicator"><div class="boost-icon circle" style="background:#f44336;"></div>Урон: ${Math.ceil(tank.damageBoostTimer)}с</div>`;
+            if (tank.speedBoostTimer > 0) html += `<div class="boost-indicator"><div class="boost-icon circle" style="background:#2196F3;"></div>Скор: ${Math.ceil(tank.speedBoostTimer)}с</div>`;
+            document.getElementById('boost-panel').innerHTML = html;
+        }
+
+        function update(dt) {
+            if (gameStarted && tank.hp > 0) updateInventoryUI();
+            if (keys['KeyR'] && isHost) { send({ type: 'restart_match' }); keys['KeyR'] = false; }
+            if (tank.hp <= 0 || tank.isDead) { if (myEngine) myEngine.update(dt, 0, 0); if (enemyEngine) enemyEngine.update(dt, 0, 0); return; }
+            if (tank.spawnImmunityTimer > 0) tank.spawnImmunityTimer -= dt;
+            if (tank.damageBoostTimer > 0) tank.damageBoostTimer -= dt;
+            if (tank.speedBoostTimer > 0) tank.speedBoostTimer -= dt;
+            if (tank.collisionTimer > 0) tank.collisionTimer -= dt;
+
+            if (keys['KeyQ'] && tank.smokeCount > 0) { tank.smokeCount--; createSmokeCloud(tank.x, tank.y); send({ type: 'deploy_smoke', x: tank.x, y: tank.y }); playSound_Smoke(); keys['KeyQ'] = false; updateInventoryUI(); }
+            if (keys['KeyE'] && tank.mineCount > 0) { tank.mineCount--; send({ type: 'deploy_mine', x: tank.x, y: tank.y }); playSound_Smoke(); keys['KeyE'] = false; updateInventoryUI(); }
+            if (keys['Space'] && tank.rocketCount > 0) { tank.rocketCount--; let mx = keys['MouseX'] || width / 2, my = keys['MouseY'] || height / 2; let wx = camX + (mx - width / 2) / scaleFactor, wy = camY + (my - height / 2) / scaleFactor; send({ type: 'launch_rocket', tx: wx, ty: wy }); playAlert(); playRocketFlyBy(); keys['Space'] = false; updateInventoryUI(); }
+
+            if (keys['KeyA']) tank.angle -= TURN_SPEED * dt;
+            if (keys['KeyD']) tank.angle += TURN_SPEED * dt;
+
+            let cosA = Math.cos(tank.angle), sinA = Math.sin(tank.angle), forwardSpeed = tank.vx * cosA + tank.vy * sinA, rightSpeed = -tank.vx * sinA + tank.vy * cosA, input = 0;
+            if (keys['KeyW']) input = 1;
+            if (keys['KeyS']) input = -1;
+
+            let currentMaxSpeed = MAX_SPEED_FORWARD;
+            if (tank.speedBoostTimer > 0) currentMaxSpeed *= 1.4;
+
+            let targetSpeed = 0, accelRate = 0;
+            if (input === 1) { targetSpeed = currentMaxSpeed; accelRate = forwardSpeed < 0 ? BRAKE_POWER : ACCEL_FORWARD; }
+            else if (input === -1) { targetSpeed = -MAX_SPEED_REVERSE; accelRate = forwardSpeed > 0 ? BRAKE_POWER : ACCEL_REVERSE; }
+            else { targetSpeed = 0; accelRate = NATURAL_DRAG; }
+
+            if (input === -1 && forwardSpeed > 0) { forwardSpeed -= accelRate * dt; if (forwardSpeed < 0) forwardSpeed = 0; }
+            else if (input === 1 && forwardSpeed < 0) { forwardSpeed += accelRate * dt; if (forwardSpeed > 0) forwardSpeed = 0; }
+            else { if (forwardSpeed < targetSpeed) { forwardSpeed += accelRate * dt; if (forwardSpeed > targetSpeed) forwardSpeed = targetSpeed; } else { forwardSpeed -= accelRate * dt; if (forwardSpeed < targetSpeed) forwardSpeed = targetSpeed; } }
+
+            rightSpeed *= GRIP;
+            tank.vx = forwardSpeed * cosA - rightSpeed * sinA;
+            tank.vy = forwardSpeed * sinA + rightSpeed * cosA;
+
+            let nx = tank.x + tank.vx * dt, ny = tank.y + tank.vy * dt;
+            let colX = checkCollision(nx, tank.y, 37); if (colX === -1) tank.x = nx; else tank.vx = 0;
+            let colY = checkCollision(tank.x, ny, 22); if (colY === -1) tank.y = ny; else tank.vy = 0;
+
+            for (let id in enemyTanks) {
+                let et = enemyTanks[id];
+                if (et.hp > 0) {
+                    let d = Math.hypot(tank.x - et.x, tank.y - et.y);
+                    if (d < 30 && d > 0) {
+                        let a = Math.atan2(tank.y - et.y, tank.x - et.x);
+                        tank.x += Math.cos(a) * 150 * dt;
+                        tank.y += Math.sin(a) * 150 * dt;
+                        let rvx = tank.vx - et.vx, rvy = tank.vy - et.vy, rs = Math.hypot(rvx, rvy);
+                        if (rs > MAX_SPEED_FORWARD * 0.5 && tank.collisionTimer <= 0) {
+                            if (tank.spawnImmunityTimer <= 0) { tank.hp -= COLLISION_DAMAGE; }
+                            spawnParticles(tank.x, tank.y, '#fff', 10);
+                            playSound_Hit();
+                            send({ type: 'collision_damage', otherId: id });
+                            tank.collisionTimer = 1;
+                            if (tank.hp <= 0 && !tank.isDead) { send({ type: 'death' }); tank.isDead = true; }
+                        }
+                    }
+                }
+            }
+
+            let mySpeedNorm = Math.abs(forwardSpeed) / currentMaxSpeed, enemySpeed = 0, distToEnemy = 1200;
+            for (let id in enemyTanks) { let et = enemyTanks[id]; if (et.hp > 0) { let d = Math.hypot(tank.x - et.x, tank.y - et.y); if (d < distToEnemy) { distToEnemy = d; enemySpeed = Math.hypot(et.vx, et.vy); } } }
+            let distFactor = Math.max(0, 1 - distToEnemy / 1200);
+            if (myEngine) myEngine.update(dt, mySpeedNorm, 1);
+            if (enemyEngine) enemyEngine.update(dt, enemySpeed / MAX_SPEED_FORWARD, distFactor);
+
+            if (tank.hp > 0) {
+                if (tank.hp <= 33) { if (Math.random() > 0.7) spawnParticles(tank.x, tank.y, '#555', 1, 'fire_smoke'); if (Math.random() > 0.8) spawnParticles(tank.x, tank.y, '#ffaa00', 1, 'spark_fire'); }
+                else if (tank.hp <= 66 && Math.random() > 0.85) spawnParticles(tank.x, tank.y, '#888', 1, 'smoke');
+            }
+            for (let id in enemyTanks) {
+                let et = enemyTanks[id];
+                if (et.hp > 0) {
+                    if (et.hp <= 33) { if (Math.random() > 0.7) spawnParticles(et.x, et.y, '#555', 1, 'fire_smoke'); if (Math.random() > 0.8) spawnParticles(et.x, et.y, '#ffaa00', 1, 'spark_fire'); }
+                    else if (et.hp <= 66 && Math.random() > 0.85) spawnParticles(et.x, et.y, '#888', 1, 'smoke');
+                }
+            }
+
+            let speedAbs = Math.abs(forwardSpeed); trackSpawnDist += speedAbs * dt;
+            if (trackSpawnDist > 8) {
+                let off = 10;
+                addTrack(tank.x - Math.cos(tank.angle + Math.PI / 2) * off, tank.y - Math.sin(tank.angle + Math.PI / 2) * off, tank.angle);
+                addTrack(tank.x - Math.cos(tank.angle - Math.PI / 2) * off, tank.y - Math.sin(tank.angle - Math.PI / 2) * off, tank.angle);
+                trackSpawnDist = 0;
+                if (Math.random() > 0.5) spawnParticles(tank.x - Math.cos(tank.angle) * 18, tank.y - Math.sin(tank.angle) * 18, '#4a3c2b', 1, 'dirt');
+            }
+
+            let mx = keys['MouseX'] || width / 2, my = keys['MouseY'] || height / 2;
+            let wx = camX + (mx - width / 2) / scaleFactor, wy = camY + (my - height / 2) / scaleFactor;
+            let targetAngle = Math.atan2(wy - tank.y, wx - tank.x), diff = targetAngle - tank.turretAngle;
+            while (diff < -Math.PI) diff += 2 * Math.PI;
+            while (diff > Math.PI) diff -= 2 * Math.PI;
+
+            let finalSpeed = TURRET_ROTATION_SPEED, hullTurnDir = 0;
+            if (keys['KeyA']) hullTurnDir = -1;
+            if (keys['KeyD']) hullTurnDir = 1;
+            if ((diff < 0 && hullTurnDir < 0) || (diff > 0 && hullTurnDir > 0)) finalSpeed += TURN_SPEED;
+            else if (hullTurnDir !== 0) finalSpeed = Math.max(0.1, finalSpeed - TURN_SPEED * 0.5);
+            if (Math.abs(diff) < finalSpeed * dt) tank.turretAngle = targetAngle;
+            else tank.turretAngle += diff > 0 ? finalSpeed * dt : -finalSpeed * dt;
+
+            if (tank.reload > 0) tank.reload -= dt;
+            let reloadTime = BASE_RELOAD_TIME, dmg = BULLET_DAMAGE_BASE;
+            if (tank.damageBoostTimer > 0) { dmg = BULLET_DAMAGE_BOOST; reloadTime = BOOST_RELOAD_TIME; }
+
+            if (keys['MouseLeft'] && tank.reload <= 0) {
+                let sr = speedAbs / currentMaxSpeed, sp = (Math.random() - 0.5) * sr * 5 * (Math.PI / 180) * 2, a = tank.turretAngle + sp;
+                let b = { x: tank.x + Math.cos(a) * 30, y: tank.y + Math.sin(a) * 30, vx: Math.cos(a) * 1200, vy: Math.sin(a) * 1200, ownerId: myId, ownerTeam: myTeam, damage: dmg };
+                bulletCounter++;
+                b.bulletId = 'b_' + myId + '_' + bulletCounter;
+                bullets.push(b);
+                tank.reload = reloadTime;
+                playSound_Shot(1);
+                spawnParticles(b.x, b.y, '#fff', 3, 'muzzle');
+                send({ type: 'bullet', bulletId: b.bulletId, x: b.x, y: b.y, vx: b.vx, vy: b.vy, damage: dmg });
+            }
+
+            send({ type: 'state', x: tank.x, y: tank.y, angle: tank.angle, turretAngle: tank.turretAngle, hp: tank.hp, vx: tank.vx, vy: tank.vy });
+
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i]; b.x += b.vx * dt; b.y += b.vy * dt;
+                if (b.x < 0 || b.x > mapWidth || b.y < 0 || b.y > mapHeight) { bullets.splice(i, 1); continue; }
+                let bi = checkCollision(b.x, b.y, 2);
+                if (bi >= 0) {
+                    spawnParticles(b.x, b.y, '#8b4513', 5);
+                    playSound_BrickHit(1);
+                    let hx = bricks[bi].x, hy = bricks[bi].y;
+                    bricks.splice(bi, 1);
+                    bullets.splice(i, 1);
+                    send({ type: 'bricks_destroy_batch', list: [{ x: hx, y: hy }], ownerId: myId, bulletId: b.bulletId });
+                    continue;
+                }
+                if (b.ownerId === myId) {
+                    for (let id in enemyTanks) {
+                        let et = enemyTanks[id];
+                        if (et.hp > 0 && et.team !== myTeam && Math.hypot(b.x - et.x, b.y - et.y) < 20) {
+                            send({ type: 'deal_damage', damage: b.damage, hitX: b.x, hitY: b.y, targetId: id, bulletId: b.bulletId });
+                            bullets.splice(i, 1);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) { let p = particles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; if (p.type === 'smoke' || p.type === 'fire_smoke' || p.type === 'dark_smoke') p.size += dt * 5; if (p.life <= 0) particles.splice(i, 1); }
+            for (let i = smokes.length - 1; i >= 0; i--) { let s = smokes[i]; s.time += dt; if (s.time > 10) { smokes.splice(i, 1); continue; } s.particles.forEach(p => { if (s.time < 0.5) p.alpha = Math.min(0.8, p.alpha + dt * 2); else if (s.time > 7) p.alpha = Math.max(0, p.alpha - dt * 0.3); p.size += dt * 2; p.ox += (Math.random() - 0.5) * dt * 5; p.oy += (Math.random() - 0.5) * dt * 5 - dt * 2; }); }
+            for (let i = rockets.length - 1; i >= 0; i--) { let r = rockets[i], el = performance.now() - r.startTime; if (el >= r.duration) { rockets.splice(i, 1); } }
+            for (let i = explosions.length - 1; i >= 0; i--) { let e = explosions[i]; e.time += dt; if (e.time > e.maxTime) explosions.splice(i, 1); }
+            updateBoosts(dt);
+            const now = performance.now();
+            while (tracks.length > 0 && now - tracks[0].time > TRACK_LIFETIME) tracks.shift();
+        }
+
+        function updateUI() { document.getElementById('score-me').innerText = myScore; document.getElementById('score-enemy').innerText = enemyScore; }
+
+        let camX = 0, camY = 0;
+
+        function draw() {
+            let dx = (keys['MouseX'] || width / 2) - width / 2, dy = (keys['MouseY'] || height / 2) - height / 2;
+            camX = tank.x + (dx / scaleFactor) * 0.33; camY = tank.y + (dy / scaleFactor) * 0.33;
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, width, height);
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            ctx.scale(scaleFactor, scaleFactor);
+            ctx.translate(-camX, -camY);
+
+            if (!cachedPatterns.grassBase && assets.images.grassBase.complete) {
+                cachedPatterns.grassBase = ctx.createPattern(assets.images.grassBase, 'repeat');
+            }
+            if (!cachedPatterns.perlinMask && assets.images.perlinMask.complete) {
+                cachedPatterns.perlinMask = ctx.createPattern(assets.images.perlinMask, 'repeat');
+            }
+
+            if (cachedPatterns.grassBase) {
+                ctx.fillStyle = cachedPatterns.grassBase;
+                ctx.fillRect(0, 0, mapWidth, mapHeight);
+                if (cachedPatterns.perlinMask) {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'overlay';
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillStyle = cachedPatterns.perlinMask;
+                    ctx.fillRect(0, 0, mapWidth, mapHeight);
+                    ctx.restore();
+                }
+            } else {
+                ctx.fillStyle = ['#888', '#eee', '#deb887'][biome];
+                ctx.fillRect(0, 0, mapWidth, mapHeight);
+            }
+
+            ctx.strokeStyle = ['#777', '#ccc', '#c1a275'][biome];
+            ctx.lineWidth = 1;
+            for (let i = 0; i < mapWidth; i += 100) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, mapHeight); ctx.stroke(); }
+            for (let i = 0; i < mapHeight; i += 100) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(mapWidth, i); ctx.stroke(); }
+
+            bricks.forEach(b => { ctx.fillStyle = (biome === 1) ? '#aaa' : '#8b4513'; ctx.fillRect(b.x, b.y, BRICK_SIZE - 1, BRICK_SIZE - 1); });
+            boosts.forEach(b => drawBoost(b.x, b.y, b.type));
+
+            const now = performance.now();
+            for (let t of tracks) { let age = now - t.time, alpha = Math.max(0, 1 - age / TRACK_LIFETIME); ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.angle); ctx.fillStyle = `rgba(30,25,20,${alpha * 0.3})`; ctx.fillRect(-4, -1.5, 8, 3); ctx.restore(); }
+
+            for (let p of particles) { if (p.type !== 'smoke' && p.type !== 'fire_smoke' && p.type !== 'dark_smoke') { ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, p.life); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); } }
+            ctx.globalAlpha = 1;
+
+            mines.forEach(m => { if (m.ownerTeam === myTeam || m.triggered) { ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(m.x, m.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f44336'; ctx.beginPath(); ctx.arc(m.x, m.y, 5, 0, Math.PI * 2); ctx.fill(); } });
+
+            for (let id in enemyTanks) { let et = enemyTanks[id]; if (et.hp > 0) { et.color = playerData[id]?.color || '#f44336'; et.turretColor = shadeColor(et.color, -20); et.trackColor = shadeColor(et.color, -40); drawTank(et); } }
+            if (tank.hp > 0) { drawTank(tank); }
+
+            bullets.forEach(b => { if (b.damage > BULLET_DAMAGE_BASE) { ctx.shadowColor = '#00ff00'; ctx.shadowBlur = 10; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; } else { ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fill(); } });
+
+            for (let p of particles) { if (p.type === 'smoke' || p.type === 'fire_smoke') { ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, p.life); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); } }
+
+            for (let id in enemyTanks) { let et = enemyTanks[id]; if (et.hp > 0) { drawNickname(et, false); } }
+            if (tank.hp > 0) { drawNickname(tank, true); }
+
+            for (let s of smokes) s.particles.forEach(p => { ctx.fillStyle = `rgba(200,200,200,${p.alpha})`; ctx.beginPath(); ctx.arc(s.x + p.ox, s.y + p.oy, p.size, 0, Math.PI * 2); ctx.fill(); });
+            for (let p of particles) { if (p.type === 'dark_smoke') { ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, p.life); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); } }
+            ctx.globalAlpha = 1;
+
+            explosions.forEach(e => { let pr = e.time / e.maxTime; if (pr < 0.33) { ctx.fillStyle = `rgba(255,255,0,${1 - pr / 0.33})`; ctx.beginPath(); ctx.arc(e.x, e.y, e.radius * (pr / 0.33), 0, Math.PI * 2); ctx.fill(); } });
+
+            for (let i = 0; i < rockets.length; i++) { let r = rockets[i], el = performance.now() - r.startTime, pr = Math.min(1, el / r.duration), rx = r.sx + (r.tx - r.sx) * pr, ry = r.sy + (r.ty - r.sy) * pr, a = Math.atan2(r.ty - r.sy, r.tx - r.sx); ctx.save(); ctx.translate(rx, ry); ctx.rotate(a); ctx.fillStyle = '#000'; ctx.fillRect(-12, -4, 24, 8); ctx.fillStyle = '#f44336'; ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(4, -6); ctx.lineTo(4, 6); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-18, -8); ctx.lineTo(-18, 8); ctx.closePath(); ctx.fill(); ctx.restore(); if (Math.random() > 0.5) spawnParticles(rx, ry, '#888', 1, 'smoke'); }
+
+            let aimX = tank.x + Math.cos(tank.turretAngle) * 200, aimY = tank.y + Math.sin(tank.turretAngle) * 200;
+            ctx.strokeStyle = 'rgba(255,0,0,0.5)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(aimX, aimY, 10, 0, Math.PI * 2);
+            ctx.moveTo(aimX - 15, aimY); ctx.lineTo(aimX + 15, aimY);
+            ctx.moveTo(aimX, aimY - 15); ctx.lineTo(aimX, aimY + 15);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawNickname(t, isMy) {
+            const displayName = playerData[t.id]?.nick || (isMy ? myNickname : 'Враг');
+            const isAlly = playerData[t.id]?.team === myTeam;
+            ctx.fillStyle = isMy || isAlly ? '#4CAF50' : '#f44336';
+            ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.shadowColor = '#000'; ctx.shadowBlur = 3;
+            ctx.fillText(displayName, t.x, t.y - 40); ctx.shadowBlur = 0;
+        }
+
+        function drawTank(t) {
+            ctx.save();
+            ctx.translate(t.x, t.y);
+            ctx.rotate(t.angle);
+            if (t.spawnImmunityTimer > 0 && Math.floor(performance.now() / 100) % 2 === 0) { ctx.globalAlpha = 0.5; }
+
+            if (assets.images.tankBase.complete && assets.loaded) {
+                const img = assets.images.tankBase;
+                ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            } else {
+                ctx.fillStyle = t.color;
+                ctx.fillRect(-t.w / 2, -t.h / 2, t.w, t.h);
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.beginPath(); ctx.moveTo(t.w / 2, -t.h / 2); ctx.lineTo(t.w / 2 + 5, 0); ctx.lineTo(t.w / 2, t.h / 2); ctx.fill();
+                ctx.fillStyle = t.trackColor;
+                ctx.fillRect(-t.w / 2, -t.h / 2, t.w, 5);
+                ctx.fillRect(-t.w / 2, t.h / 2 - 5, t.w, 5);
+            }
+            ctx.restore();
+
+            ctx.save();
+            ctx.translate(t.x + Math.cos(t.angle) * 4, t.y + Math.sin(t.angle) * 4);
+            ctx.rotate(t.turretAngle);
+
+            if (assets.images.tankTurret.complete && assets.loaded) {
+                const turretImg = assets.images.tankTurret;
+                ctx.drawImage(turretImg, -turretImg.width / 2, -turretImg.height / 2);
+            } else {
+                ctx.fillStyle = t.turretColor;
+                ctx.fillRect(10, -3, 22, 6);
+                ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.restore();
+
+            if (t.hp < TANK_MAX_HP && t.hp > 0) {
+                ctx.fillStyle = '#333'; ctx.fillRect(t.x - 20, t.y - 30, 40, 5);
+                ctx.fillStyle = t.color; ctx.fillRect(t.x - 20, t.y - 30, (t.hp / TANK_MAX_HP) * 40, 5);
+            }
+        }
+
+        function drawBoost(x, y, type) {
+            ctx.save(); ctx.translate(x, y); const r = 12;
+            if (type === 0) { ctx.fillStyle = '#4CAF50'; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-5, 2); ctx.lineTo(0, 7); ctx.lineTo(5, -3); ctx.moveTo(0, 7); ctx.lineTo(0, -5); ctx.stroke(); }
+            else if (type === 1) { ctx.fillStyle = '#f44336'; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.moveTo(6, -4); ctx.lineTo(6, 4); ctx.lineTo(-4, 0); ctx.closePath(); ctx.fill(); }
+            else if (type === 2) { ctx.fillStyle = '#2196F3'; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-6, -5); ctx.lineTo(-1, 0); ctx.lineTo(-6, 5); ctx.fill(); ctx.beginPath(); ctx.moveTo(1, -5); ctx.lineTo(6, 0); ctx.lineTo(1, 5); ctx.fill(); }
+            else if (type === 3) { ctx.fillStyle = '#888'; ctx.fillRect(-r, -r, r * 2, r * 2); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(-r, -r, r * 2, r * 2); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-3, 2, 5, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(4, -1, 4, 0, Math.PI * 2); ctx.fill(); }
+            else if (type === 4) { ctx.fillStyle = '#2e4634'; ctx.fillRect(-r, -r, r * 2, r * 2); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(-r, -r, r * 2, r * 2); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#f44336'; ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill(); }
+            else if (type === 5) { ctx.fillStyle = '#ffeb3b'; ctx.fillRect(-r, -r, r * 2, r * 2); ctx.strokeStyle = '#f44336'; ctx.lineWidth = 2; ctx.strokeRect(-r, -r, r * 2, r * 2); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 8); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.stroke(); }
+            ctx.restore();
+        }
+
+        function loop(ts) { let dt = (ts - lastTime) / 1000 || 0.016; lastTime = ts; if (dt > 0.1) dt = 0.1; update(dt); draw(); requestAnimationFrame(loop); }
+
+        window.onresize = resize; resize();
+        window.onkeydown = e => keys[e.code] = true; window.onkeyup = e => keys[e.code] = false;
+        canvas.onmousemove = e => { keys['MouseX'] = e.clientX; keys['MouseY'] = e.clientY; };
+        canvas.onmousedown = () => keys['MouseLeft'] = true; canvas.onmouseup = () => keys['MouseLeft'] = false;
+        function setStatus(t) { document.getElementById('status').innerText = t || ''; }
+    </script>
+</body>
+
+</html>

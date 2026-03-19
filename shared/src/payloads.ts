@@ -23,9 +23,10 @@ export type LobbyPlayerRow = {
     ready: boolean;
     color: string;
     isHost: boolean;
+    isBot?: boolean;
 };
 
-export type PlayerSummary = { id: string; nick: string; team: number; color: string };
+export type PlayerSummary = { id: string; nick: string; team: number; color: string; isBot?: boolean };
 
 export type MapPayload = { bricks: BrickPos[]; biome: number; w: number; h: number };
 
@@ -117,6 +118,17 @@ export type ClientBricksDestroyBatchMessage = {
 
 export type ClientDeploySmokeMessage = { type: typeof ClientMsg.DEPLOY_SMOKE; x: number; y: number };
 
+export type ClientAddBotMessage = {
+    type: typeof ClientMsg.ADD_BOT;
+    team?: number;
+    difficulty?: number;
+};
+
+export type ClientRemoveBotMessage = {
+    type: typeof ClientMsg.REMOVE_BOT;
+    botId?: string;
+};
+
 /** Сообщения, которые маршрутизирует `dispatch` на сервере. */
 export type ClientInboundMessage =
     | ClientCreateLobbyMessage
@@ -136,7 +148,9 @@ export type ClientInboundMessage =
     | ClientCollisionDamageMessage
     | ClientBoostPickupMessage
     | ClientBricksDestroyBatchMessage
-    | ClientDeploySmokeMessage;
+    | ClientDeploySmokeMessage
+    | ClientAddBotMessage
+    | ClientRemoveBotMessage;
 
 // --- сервер → клиент ---
 

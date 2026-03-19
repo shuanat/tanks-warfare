@@ -23,6 +23,8 @@ export const ClientMsg = Object.freeze({
     BOOST_PICKUP: 'boost_pickup',
     BRICKS_DESTROY_BATCH: 'bricks_destroy_batch',
     DEPLOY_SMOKE: 'deploy_smoke',
+    ADD_BOT: 'add_bot',
+    REMOVE_BOT: 'remove_bot',
 } as const);
 
 export const ServerMsg = Object.freeze({

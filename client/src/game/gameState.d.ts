@@ -106,7 +106,7 @@ export const session: {
     myId: string | null;
     myTeam: number;
     myColor: string;
-    playerData: Record<string, { nick: string; team: number; color: string }>;
+    playerData: Record<string, { nick: string; team: number; color: string; isBot?: boolean }>;
     myNickname: string;
     currentLobbyId: string | null;
     myEngine: TankEngineHandle | null;

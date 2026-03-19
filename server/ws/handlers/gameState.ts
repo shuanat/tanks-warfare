@@ -1,19 +1,28 @@
-import { MAX_SCORE } from '../../constants.js';
+import { ServerMsg } from '#shared/protocol.js';
+import type { WebSocket, WebSocketServer } from 'ws';
+import { MAX_SCORE, SPAWN_IMMUNITY_TIME } from '../../constants.js';
+import { buildBotPathGrid } from '../../game/pathfinding.js';
 import { triggerMine } from '../../game/mine.js';
 import { broadcastGame, broadcastScores } from '../broadcast.js';
 import { lobbies } from '../lobbyStore.js';
-import { ServerMsg } from '#shared/protocol.js';
-import type { WebSocket, WebSocketServer } from 'ws';
 
 export function handleState(_wss: WebSocketServer, ws: WebSocket, data: Record<string, unknown>): void {
     const lobby = ws.lobbyId ? lobbies[ws.lobbyId] : undefined;
     if (lobby?.gameStarted) {
+        ws.x = data.x as number;
+        ws.y = data.y as number;
+        ws.angle = data.angle as number;
+        ws.turretAngle = data.turretAngle as number;
+        ws.vx = data.vx as number;
+        ws.vy = data.vy as number;
+        ws.hp = data.hp as number;
         ws.lastPos = {
             x: data.x as number,
             y: data.y as number,
             hp: data.hp as number,
             team: ws.team,
         };
+        ws.lastPosAt = Date.now();
 
         if (lobby.mines) {
             lobby.mines.forEach((mine) => {
@@ -41,7 +50,7 @@ export function handleState(_wss: WebSocketServer, ws: WebSocket, data: Record<s
                 hp: data.hp,
                 vx: data.vx,
                 vy: data.vy,
-                spawnImmunityTimer: Math.max(0, 3.0 - (Date.now() - ws.spawnTime) / 1000),
+                spawnImmunityTimer: Math.max(0, SPAWN_IMMUNITY_TIME - (Date.now() - ws.spawnTime) / 1000),
             },
             ws,
         );
@@ -55,6 +64,8 @@ export function handleRestartMatch(_wss: WebSocketServer, ws: WebSocket, _data: 
         lobby.mines = [];
         lobby.boosts = [];
         lobby.rockets = [];
+        lobby.aiBullets = [];
+        lobby.aiGrid = lobby.mapData ? buildBotPathGrid(lobby.mapData) : null;
         lobby.players.forEach((p) => {
             p.spawnTime = Date.now();
         });
@@ -66,6 +77,8 @@ export function handleRestartMatch(_wss: WebSocketServer, ws: WebSocket, _data: 
 export function handleDeath(_wss: WebSocketServer, ws: WebSocket, _data: Record<string, unknown>): void {
     const lobby = ws.lobbyId ? lobbies[ws.lobbyId] : undefined;
     if (lobby?.gameStarted) {
+        ws.hp = 0;
+        if (ws.lastPos) ws.lastPos.hp = 0;
         ws.spawnTime = Date.now() + 2000;
         const enemyTeam = ws.team === 1 ? 2 : 1;
         lobby.scores[enemyTeam]++;

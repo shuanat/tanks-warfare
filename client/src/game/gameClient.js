@@ -2,9 +2,9 @@
  * Игровой клиент: лобби, цикл кадра, DOM.
  * Симуляция — simulation.js; коллизии — collision.js; эффекты — effects.js; рендер — render/*; ввод — input/keyboard.js.
  */
+import { ClientMsg } from '../../../shared/dist/protocol.js';
 import { SPAWN_IMMUNITY_TIME, TANK_COLORS, TANK_MAX_HP, VIRTUAL_HEIGHT } from '../config/constants.js';
 import { getWebSocketUrl } from '../config/env.js';
-import { ClientMsg } from '../../../shared/dist/protocol.js';
 import { attachGameInput, gameKeys } from '../input/keyboard.js';
 import { playSound_StartMusic, updateVolume } from '../lib/audio.js';
 import {
@@ -156,6 +156,8 @@ function showLobby(id, name, isHost) {
     document.getElementById('roomCodeDisplay').innerText = id;
     document.getElementById('lobbyNameDisplay').innerText = name || 'Лобби';
     document.getElementById('btnStart').style.display = isHost ? 'inline-block' : 'none';
+    document.getElementById('btnAddBot').style.display = isHost ? 'inline-block' : 'none';
+    document.getElementById('btnRemoveBot').style.display = isHost ? 'inline-block' : 'none';
     document.getElementById('lobbyNickInput').value = session.myNickname;
     document.getElementById('lobbyNickInput').oninput = (e) => {
         session.myNickname = sanitize(e.target.value, 12);
@@ -189,9 +191,9 @@ function updateLobbyPlayers(players) {
     players.forEach((p) => {
         const div = document.createElement('div');
         div.className = 'player-slot team' + p.team;
-        div.innerHTML = `<div class="player-color" style="background:${p.color}"></div><strong>${p.nick}</strong>${p.isHost ? ' 👑' : ''}`;
+        div.innerHTML = `<div class="player-color" style="background:${p.color}"></div><strong>${p.nick}</strong>${p.isHost ? ' 👑' : ''}${p.isBot ? ' 🤖' : ''}`;
         (p.team === 1 ? t1 : t2).appendChild(div);
-        session.playerData[p.id] = { nick: p.nick, team: p.team, color: p.color };
+        session.playerData[p.id] = { nick: p.nick, team: p.team, color: p.color, isBot: Boolean(p.isBot) };
         if (p.id === session.myId) {
             session.myTeam = p.team;
             session.myColor = p.color;
@@ -208,12 +210,22 @@ function startGame() {
     sendGameMessage({ type: ClientMsg.START_GAME });
 }
 
+function addBot() {
+    sendGameMessage({ type: ClientMsg.ADD_BOT });
+}
+
+function removeBot() {
+    sendGameMessage({ type: ClientMsg.REMOVE_BOT });
+}
+
 function startGameClient() {
     document.getElementById('lobby').style.display = 'none';
     document.getElementById('ui-game').style.display = 'block';
     document.getElementById('score-board').style.display = 'block';
     document.getElementById('volume-control').style.display = 'block';
     document.getElementById('boost-panel').style.display = 'flex';
+    document.getElementById('victory-screen').style.display = 'none';
+    document.getElementById('death-screen').style.display = 'none';
     resize();
     session.gameStarted = true;
     lastTime = performance.now();
@@ -254,6 +266,7 @@ function resetMatch() {
         enemyTanks[id].vy = 0;
         enemyTanks[id].spawnImmunityTimer = SPAWN_IMMUNITY_TIME;
     }
+    session.gameStarted = true;
     playSound_StartMusic();
     setTimeout(spawnMyTank, 500);
 }
@@ -397,5 +410,5 @@ Object.assign(gameMessageHooks, {
 });
 configureServerMessages({ send: sendGameMessage });
 
-export { createLobby, joinLobby, joinLobbyByCode, setTeam, startGame, toggleReady };
+export { addBot, createLobby, joinLobby, joinLobbyByCode, removeBot, setTeam, startGame, toggleReady };
 

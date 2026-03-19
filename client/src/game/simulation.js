@@ -2,6 +2,7 @@
  * Игровой шаг симуляции: движение, столкновения, снаряды, таймеры.
  * Сеть — только через переданный send(); DOM — через updateInventoryUI.
  */
+import { ClientMsg } from '../../../shared/dist/protocol.js';
 import {
     ACCEL_FORWARD,
     ACCEL_REVERSE,
@@ -23,7 +24,6 @@ import {
     TURN_SPEED,
     TURRET_ROTATION_SPEED,
 } from '../config/constants.js';
-import { ClientMsg } from '../../../shared/dist/protocol.js';
 import {
     playAlert,
     playRocketFlyBy,
@@ -75,6 +75,7 @@ export function runSimulation(dt, ctx) {
     const mapW = level.mapWidth;
     const mapH = level.mapHeight;
 
+    if (!session.gameStarted) return;
     if (session.gameStarted && tank.hp > 0) updateInventoryUI();
     if (keys['KeyR'] && session.isHost) {
         send({ type: ClientMsg.RESTART_MATCH });

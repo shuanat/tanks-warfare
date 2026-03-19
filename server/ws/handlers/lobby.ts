@@ -1,10 +1,12 @@
-import { MAX_PLAYERS } from '../../constants.js';
-import { generateMapData } from '../../game/mapGenerator.js';
-import { isValidColor, sanitizeLobbyName, sanitizeNick } from '../../utils/validation.js';
-import { broadcastLobbyList, broadcastLobbyState } from '../broadcast.js';
-import { lobbies } from '../lobbyStore.js';
 import { ServerMsg } from '#shared/protocol.js';
 import type { WebSocket, WebSocketServer } from 'ws';
+import { MAX_PLAYERS } from '../../constants.js';
+import { generateMapData } from '../../game/mapGenerator.js';
+import { buildBotPathGrid } from '../../game/pathfinding.js';
+import { isValidColor, sanitizeLobbyName, sanitizeNick } from '../../utils/validation.js';
+import { createBotForLobby, initBotsForStart, startAiTick } from '../bots.js';
+import { broadcastLobbyList, broadcastLobbyState } from '../broadcast.js';
+import { lobbies } from '../lobbyStore.js';
 
 export function handleCreateLobby(wss: WebSocketServer, ws: WebSocket, data: Record<string, unknown>): void {
     const lobbyId = Math.floor(Math.random() * 9000 + 1000).toString();
@@ -22,8 +24,11 @@ export function handleCreateLobby(wss: WebSocketServer, ws: WebSocket, data: Rec
         mines: [],
         boosts: [],
         rockets: [],
+        aiBullets: [],
+        aiGrid: null,
         gameStarted: false,
         mapData: null,
+        aiTickHandle: null,
     };
     ws.send(
         JSON.stringify({
@@ -103,6 +108,8 @@ export function handleStartGame(_wss: WebSocketServer, ws: WebSocket, _data: Rec
     if (lobby && ws.id === lobby.hostId && !lobby.gameStarted && lobby.players.length >= 1) {
         lobby.gameStarted = true;
         lobby.mapData = generateMapData();
+        lobby.aiGrid = buildBotPathGrid(lobby.mapData);
+        initBotsForStart(lobby);
         lobby.players.forEach((p) => {
             p.isInGame = true;
             p.spawnTime = Date.now();
@@ -117,10 +124,58 @@ export function handleStartGame(_wss: WebSocketServer, ws: WebSocket, _data: Rec
                         nick: pl.nickname,
                         team: pl.team,
                         color: pl.color,
+                        isBot: Boolean(pl.isBot),
                     })),
                     map: lobby.mapData,
                 }),
             );
         });
+        if (lobby.players.some((p) => p.isBot)) {
+            startAiTick(_wss, lobby);
+        }
     }
+}
+
+export function handleAddBot(wss: WebSocketServer, ws: WebSocket, data: Record<string, unknown>): void {
+    const lobby = ws.lobbyId ? lobbies[ws.lobbyId] : undefined;
+    if (!lobby) return;
+    if (ws.id !== lobby.hostId) {
+        ws.send(JSON.stringify({ type: ServerMsg.ERROR, msg: 'Only host can add bots' }));
+        return;
+    }
+    if (lobby.gameStarted) {
+        ws.send(JSON.stringify({ type: ServerMsg.ERROR, msg: 'Game already started' }));
+        return;
+    }
+    if (lobby.players.length >= MAX_PLAYERS) {
+        ws.send(JSON.stringify({ type: ServerMsg.ERROR, msg: 'Lobby full' }));
+        return;
+    }
+    const team = typeof data.team === 'number' && (data.team === 1 || data.team === 2) ? data.team : undefined;
+    const difficulty = typeof data.difficulty === 'number' ? data.difficulty : 1;
+    createBotForLobby(lobby, { team, difficulty });
+    broadcastLobbyState(lobby);
+    broadcastLobbyList(wss);
+}
+
+export function handleRemoveBot(wss: WebSocketServer, ws: WebSocket, data: Record<string, unknown>): void {
+    const lobby = ws.lobbyId ? lobbies[ws.lobbyId] : undefined;
+    if (!lobby) return;
+    if (ws.id !== lobby.hostId) {
+        ws.send(JSON.stringify({ type: ServerMsg.ERROR, msg: 'Only host can remove bots' }));
+        return;
+    }
+    if (lobby.gameStarted) {
+        ws.send(JSON.stringify({ type: ServerMsg.ERROR, msg: 'Game already started' }));
+        return;
+    }
+    const botId = typeof data.botId === 'string' ? data.botId : undefined;
+    const index = lobby.players.findIndex((p) => p.isBot && (!botId || p.id === botId));
+    if (index === -1) {
+        ws.send(JSON.stringify({ type: ServerMsg.ERROR, msg: 'Bot not found' }));
+        return;
+    }
+    lobby.players.splice(index, 1);
+    broadcastLobbyState(lobby);
+    broadcastLobbyList(wss);
 }

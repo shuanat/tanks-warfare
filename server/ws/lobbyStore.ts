@@ -1,4 +1,5 @@
 import type { WebSocket } from 'ws';
+import type { BotPathGrid } from '../game/pathfinding.js';
 
 export type BrickPos = { x: number; y: number };
 
@@ -30,6 +31,19 @@ export type LobbyMine = {
     triggered: boolean;
 };
 
+export type LobbyBotBullet = {
+    bulletId: string;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    ownerId: string;
+    ownerTeam: number;
+    damage: number;
+    createdAt: number;
+    ttl: number;
+};
+
 export type Lobby = {
     hostId: string;
     name: string;
@@ -38,8 +52,11 @@ export type Lobby = {
     mines: LobbyMine[];
     boosts: LobbyBoost[];
     rockets: LobbyRocket[];
+    aiBullets: LobbyBotBullet[];
+    aiGrid: BotPathGrid | null;
     gameStarted: boolean;
     mapData: MapData | null;
+    aiTickHandle: ReturnType<typeof setInterval> | null;
 };
 
 export const lobbies: Record<string, Lobby> = {};

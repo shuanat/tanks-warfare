@@ -1,6 +1,7 @@
 import { ServerMsg } from '#shared/protocol.js';
 import type { WebSocket, WebSocketServer } from 'ws';
 import { BRICK_SIZE } from '../../constants.js';
+import { buildBotPathGrid } from '../../game/pathfinding.js';
 import { broadcastGame } from '../broadcast.js';
 import type { Lobby, LobbyRocket } from '../lobbyStore.js';
 import { lobbies } from '../lobbyStore.js';
@@ -34,6 +35,7 @@ function runRocketExplosion(lobby: Lobby, rocket: LobbyRocket): void {
             }
         }
     }
+    lobby.aiGrid = lobby.mapData ? buildBotPathGrid(lobby.mapData) : null;
 
     broadcastGame(lobby, {
         type: ServerMsg.EXPLOSION_EVENT,
@@ -169,6 +171,7 @@ export function handleBricksDestroyBatch(_wss: WebSocketServer, ws: WebSocket, d
                 spawnedBoosts,
                 bulletId: data.bulletId,
             });
+            lobby.aiGrid = buildBotPathGrid(lobby.mapData!);
         }
     }
 }

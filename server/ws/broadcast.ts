@@ -1,8 +1,8 @@
+import { ServerMsg } from '#shared/protocol.js';
 import type { WebSocket, WebSocketServer } from 'ws';
 import { MAX_PLAYERS } from '../constants.js';
-import { ServerMsg } from '#shared/protocol.js';
-import { lobbies } from './lobbyStore.js';
 import type { Lobby } from './lobbyStore.js';
+import { lobbies } from './lobbyStore.js';
 
 export function broadcastLobbyList(wss: WebSocketServer, excludeWs: WebSocket | null = null): void {
     const list = Object.values(lobbies).map((l) => ({
@@ -39,6 +39,7 @@ export function broadcastLobbyState(lobby: Lobby): void {
             ready: p.ready,
             color: p.color,
             isHost: p.id === lobby.hostId,
+            isBot: Boolean(p.isBot),
         })),
         hostId: lobby.hostId,
         name: lobby.name,

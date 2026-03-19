@@ -2,6 +2,11 @@
  * Входящие сообщения сервера: реестр по type (фаза 2.1 + 4).
  */
 import {
+    ClientMsg,
+    ServerMsg,
+    type ServerMessageType,
+} from '../../../shared/dist/protocol.js';
+import {
     BRICK_SIZE,
     BULLET_DAMAGE_BASE,
     COLLISION_DAMAGE,
@@ -21,11 +26,6 @@ import {
     playSound_Victory,
     TankEngine,
 } from '../lib/audio.js';
-import {
-    ClientMsg,
-    ServerMsg,
-    type ServerMessageType,
-} from '../../../shared/dist/protocol.js';
 
 type SendPayload = Record<string, unknown>;
 
@@ -75,6 +75,7 @@ function handleLobbyCreated(d: Record<string, unknown>) {
         nick: session.myNickname,
         team: session.myTeam,
         color: session.myColor,
+        isBot: false,
     };
 }
 
@@ -90,6 +91,7 @@ function handleLobbyJoined(d: Record<string, unknown>) {
         nick: session.myNickname,
         team: session.myTeam,
         color: session.myColor,
+        isBot: false,
     };
 }
 
@@ -120,8 +122,8 @@ function handleStart(d: Record<string, unknown>) {
     }
     session.myTeam = d.team as number;
     session.myColor = d.color as string;
-    ((d.allPlayers as { id: string; nick: string; team: number; color: string }[]) || []).forEach((p) => {
-        session.playerData[p.id] = { nick: p.nick, team: p.team, color: p.color };
+    ((d.allPlayers as { id: string; nick: string; team: number; color: string; isBot?: boolean }[]) || []).forEach((p) => {
+        session.playerData[p.id] = { nick: p.nick, team: p.team, color: p.color, isBot: Boolean(p.isBot) };
     });
     if (d.map) {
         const map = d.map as { bricks: { x: number; y: number }[]; biome: number; w: number; h: number };
@@ -144,6 +146,7 @@ function handleScoreUpdate(d: Record<string, unknown>) {
 function handleGameOver(d: Record<string, unknown>) {
     const win = d.winner === session.myTeam;
     const draw = d.winner === 0;
+    session.gameStarted = false;
     const deathEl = document.getElementById('death-screen');
     const victoryEl = document.getElementById('victory-screen');
     if (deathEl) deathEl.style.display = 'none';

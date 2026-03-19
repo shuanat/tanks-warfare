@@ -9,9 +9,11 @@ import {
 } from './handlers/combat.js';
 import { handleDeath, handleRestartMatch, handleState } from './handlers/gameState.js';
 import {
+    handleAddBot,
     handleChangeTeam,
     handleCreateLobby,
     handleJoinLobby,
+    handleRemoveBot,
     handleStartGame,
     handleToggleReady,
     handleUpdatePlayer,
@@ -45,6 +47,8 @@ const handlers: Partial<Record<string, DispatchFn>> = {
     [ClientMsg.BOOST_PICKUP]: handleBoostPickup,
     [ClientMsg.BRICKS_DESTROY_BATCH]: handleBricksDestroyBatch,
     [ClientMsg.DEPLOY_SMOKE]: handleDeploySmoke,
+    [ClientMsg.ADD_BOT]: handleAddBot,
+    [ClientMsg.REMOVE_BOT]: handleRemoveBot,
 };
 
 /** Проверка: на каждое значение `ClientMsg` назначен хендлер (юнит-тест + опционально dev-старт). */

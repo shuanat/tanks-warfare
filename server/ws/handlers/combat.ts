@@ -1,8 +1,9 @@
+import { ServerMsg } from '#shared/protocol.js';
+import type { WebSocket, WebSocketServer } from 'ws';
 import { COLLISION_DAMAGE } from '../../constants.js';
 import { broadcastGame } from '../broadcast.js';
 import { lobbies } from '../lobbyStore.js';
-import { ServerMsg } from '#shared/protocol.js';
-import type { WebSocket, WebSocketServer } from 'ws';
+import { handleDeath } from './gameState.js';
 
 export function handleBullet(_wss: WebSocketServer, ws: WebSocket, data: Record<string, unknown>): void {
     const lobby = ws.lobbyId ? lobbies[ws.lobbyId] : undefined;
@@ -38,10 +39,15 @@ export function handleDealDamage(_wss: WebSocketServer, ws: WebSocket, data: Rec
         const shooter = lobby.players.find((p) => p.id === ws.id);
         const target = lobby.players.find((p) => p.id === data.targetId);
         if (shooter && target && shooter.team !== target.team && target.readyState === 1) {
+            const damage = typeof data.damage === 'number' ? data.damage : 0;
+            const currentHp = target.lastPos?.hp ?? target.hp ?? 0;
+            const nextHp = Math.max(0, currentHp - damage);
+            if (target.lastPos) target.lastPos.hp = nextHp;
+            if (target.isBot) target.hp = nextHp;
             target.send(
                 JSON.stringify({
                     type: ServerMsg.BULLET_HIT,
-                    damage: data.damage,
+                    damage,
                     hitX: data.hitX,
                     hitY: data.hitY,
                     attackerId: ws.id,
@@ -49,6 +55,9 @@ export function handleDealDamage(_wss: WebSocketServer, ws: WebSocket, data: Rec
                     bulletId: data.bulletId,
                 }),
             );
+            if (target.isBot && currentHp > 0 && nextHp <= 0) {
+                handleDeath(_wss, target, {});
+            }
         }
         broadcastGame(lobby, {
             type: ServerMsg.BULLET_HIT_VISUAL,

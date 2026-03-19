@@ -2,9 +2,11 @@
  * Кнопки лобби и меню без глобальных window.* (фаза 2.4).
  */
 import {
+    addBot,
     createLobby,
     joinLobby,
     joinLobbyByCode,
+    removeBot,
     setTeam,
     startGame,
     toggleReady,
@@ -17,6 +19,8 @@ export function mountLobbyUI() {
     document.querySelector('.team-btn.t2')?.addEventListener('click', () => setTeam(2));
     document.getElementById('btnReady')?.addEventListener('click', () => toggleReady());
     document.getElementById('btnStart')?.addEventListener('click', () => startGame());
+    document.getElementById('btnAddBot')?.addEventListener('click', () => addBot());
+    document.getElementById('btnRemoveBot')?.addEventListener('click', () => removeBot());
 
     document.getElementById('lobbyList')?.addEventListener('click', (e) => {
         const btn = e.target.closest('.join-btn');

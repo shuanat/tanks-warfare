@@ -2,16 +2,26 @@
  * Никнеймы над танками и прицел (фаза 3.3).
  */
 
-export function drawNickname(ctx, t, isMy, session) {
-    const displayName = session.playerData[t.id]?.nick || (isMy ? session.myNickname : 'Враг');
-    const isAlly = session.playerData[t.id]?.team === session.myTeam;
-    ctx.fillStyle = isMy || isAlly ? '#4CAF50' : '#f44336';
+/** Один раз на проход никнеймов: шрифт и тень (меньше churn свойств canvas). */
+export function beginNicknameDrawPass(ctx) {
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.shadowColor = '#000';
     ctx.shadowBlur = 3;
-    ctx.fillText(displayName, t.x, t.y - 40);
+}
+
+export function endNicknameDrawPass(ctx) {
     ctx.shadowBlur = 0;
+}
+
+/**
+ * Рисует ник над танком. Перед циклом вызвать `beginNicknameDrawPass`, после — `endNicknameDrawPass`.
+ */
+export function drawNickname(ctx, t, isMy, session) {
+    const displayName = session.playerData[t.id]?.nick || (isMy ? session.myNickname : 'Враг');
+    const isAlly = session.playerData[t.id]?.team === session.myTeam;
+    ctx.fillStyle = isMy || isAlly ? '#4CAF50' : '#f44336';
+    ctx.fillText(displayName, t.x, t.y - 40);
 }
 
 export function drawAimCrosshair(ctx, tank) {

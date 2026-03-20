@@ -16,7 +16,7 @@ import {
     drawTracks,
 } from './effects.js';
 import { drawTank } from './tank.js';
-import { drawAimCrosshair, drawNickname } from './uiOverlay.js';
+import { beginNicknameDrawPass, drawAimCrosshair, drawNickname, endNicknameDrawPass } from './uiOverlay.js';
 import {
     drawBoostIcon,
     drawBricks,
@@ -74,10 +74,10 @@ export function drawGameFrame(ctx, view) {
         perlinImg: assets.images.perlinMask,
     });
 
-    drawBricks(ctx, bricks, level.biome);
+    drawBricks(ctx, bricks, level.biome, level.mapWidth, level.mapHeight, view.bricksDrawRevision ?? 0);
     boosts.forEach((b) => drawBoostIcon(ctx, b.x, b.y, b.type));
 
-    const now = performance.now();
+    const now = typeof view.frameTimeMs === 'number' ? view.frameTimeMs : performance.now();
     drawTracks(ctx, tracks, now);
 
     drawParticlesSparks(ctx, particles);
@@ -87,9 +87,13 @@ export function drawGameFrame(ctx, view) {
     for (const id in enemyTanks) {
         const et = enemyTanks[id];
         if (et.hp > 0) {
-            et.color = session.playerData[id]?.color || '#f44336';
-            et.turretColor = shadeColor(et.color, -20);
-            et.trackColor = shadeColor(et.color, -40);
+            const baseColor = session.playerData[id]?.color || '#f44336';
+            et.color = baseColor;
+            if (et._renderShadeSource !== baseColor) {
+                et._renderShadeSource = baseColor;
+                et.turretColor = shadeColor(baseColor, -20);
+                et.trackColor = shadeColor(baseColor, -40);
+            }
             drawTank(ctx, et);
         }
     }
@@ -102,6 +106,7 @@ export function drawGameFrame(ctx, view) {
     drawParticlesSmoke(ctx, particles);
     ctx.globalAlpha = 1;
 
+    beginNicknameDrawPass(ctx);
     for (const id in enemyTanks) {
         const et = enemyTanks[id];
         if (et.hp > 0) drawNickname(ctx, et, false, session);
@@ -109,13 +114,14 @@ export function drawGameFrame(ctx, view) {
     if (tank.hp > 0) {
         drawNickname(ctx, tank, true, session);
     }
+    endNicknameDrawPass(ctx);
 
     drawSmokes(ctx, smokes);
     drawDarkSmokeParticles(ctx, particles);
 
     drawExplosions(ctx, explosions);
 
-    drawRockets(ctx, rockets, onRocketSmoke);
+    drawRockets(ctx, rockets, onRocketSmoke, now);
 
     if (tank.hp > 0) {
         drawAimCrosshair(ctx, tank);

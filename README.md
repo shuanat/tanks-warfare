@@ -133,7 +133,7 @@ gh repo create tanks-warfare --public --source=. --remote=origin --push --descri
 ```bash
 npm install
 # Терминал 1 — API + WebSocket (без .env слушает порт 3033; на Windows порт 80 без прав админа не поднимется)
-copy .env.example .env   # по желанию; для VPS в .env укажите PORT=80
+copy .env.example .env   # по желанию
 npm run dev:server
 
 # Терминал 2 — Vite (client/.env.development → VITE_WS_URL должен совпадать с PORT, по умолчанию ws://localhost:3033)
@@ -152,39 +152,30 @@ npm run dev:client
 
 **Чёрный экран / `ECONNREFUSED 127.0.0.1:3033` для `/assets/...` в логе Vite:** либо поднимите **сервер** (`npm run dev:server` или одной командой `npm run dev`), либо скопируйте ассеты в **`client/public/assets/`** (`images/`, `sounds/`, …) — тогда Vite отдаст их без прокси. Порт прокси берётся из корневого `.env` (`PORT`, по умолчанию 3033), он должен совпадать с портом сервера.
 
-## Сборка и продакшен
+## Сборка
 
-1. Положите ассеты в **`client/public/assets/`** (те же пути, что и раньше: `images/`, `sounds/`).
-2. Сборка клиента:
+Положите ассеты в **`client/public/assets/`** (`images/`, `sounds/` — см. [client/public/assets/README.txt](client/public/assets/README.txt)).
 
 ```bash
 npm run build
 ```
 
-1. На VPS задайте **`STATIC_ROOT`** на каталог, где лежат **`index.html`** из `client/dist` и папка **`assets`** (можно скопировать всё содержимое `client/dist` + ваши `assets` рядом, как раньше в `/var/www/tanks`).
-
-```bash
-STATIC_ROOT=/var/www/tanks PORT=80 pm2 start server/dist/index.js --name tanks
-```
-
-Пример конфигурации PM2 в репозитории: [`ecosystem.config.cjs`](ecosystem.config.cjs) (`pm2 start ecosystem.config.cjs --env production`). Шаблон переменных для VPS: [`.env.production.example`](.env.production.example).
-
-Перед первым запуском соберите артефакты: `npm run build` (shared + сервер + клиент). Либо `pm2 start server.js` — корневой `server.js` подключает `server/dist/index.js`.
+Собирает `shared`, сервер и клиент. Статика игры — **`client/dist`**. Пример набора переменных без dev-сервера: [`.env.production.example`](.env.production.example).
 
 ## Переменные окружения
 
 | Переменная    | Описание                                                                                                           |
 | ------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `PORT`        | HTTP + WebSocket. Локально по умолчанию **3033**; на VPS обычно **80** (задаётся в `.env` или в команде pm2)       |
+| `PORT`        | HTTP + WebSocket. По умолчанию **3033**; смена порта — в `.env` или в команде запуска процесса                     |
 | `STATIC_ROOT` | Каталог со статикой (`index.html`, `/assets/...`). По умолчанию: `client/dist` относительно репозитория            |
 | `NODE_ENV`    | `development` / `production`                                                                                       |
 | `LOG_LEVEL`   | Опционально: `error` / `warn` / `info` / `debug` — серверный лог (`server/logger.ts`). В prod по умолчанию `info`. |
 
 Клиент (только dev-сборка Vite):
 
-| Переменная    | Описание                                                                                                            |
-| ------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `VITE_WS_URL` | Полный URL WebSocket, напр. `ws://localhost:3033` (тот же порт, что `PORT` у сервера). В продакшене обычно не нужен |
+| Переменная    | Описание                                                                                                                      |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_WS_URL` | Полный URL WebSocket, напр. `ws://localhost:3033` (тот же порт, что `PORT` у сервера). Для собранного клиента обычно не нужен |
 
 ## Структура каталогов
 

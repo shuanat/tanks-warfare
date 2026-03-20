@@ -7,6 +7,10 @@ let gridCanvas = null;
 let gridCtx = null;
 let gridKey = '';
 
+let bricksCanvas = null;
+let bricksCtx = null;
+let bricksCacheKey = '';
+
 function ensureGridCanvas(w, h) {
     if (!gridCanvas) {
         gridCanvas = document.createElement('canvas');
@@ -80,11 +84,36 @@ export function drawMapBackground(ctx, o) {
     ctx.drawImage(gridCanvas, 0, 0);
 }
 
-export function drawBricks(ctx, bricks, biome) {
-    bricks.forEach((b) => {
-        ctx.fillStyle = biome === 1 ? '#aaa' : '#8b4513';
-        ctx.fillRect(b.x, b.y, BRICK_SIZE - 1, BRICK_SIZE - 1);
-    });
+function ensureBricksCanvas(w, h) {
+    if (!bricksCanvas) {
+        bricksCanvas = document.createElement('canvas');
+        bricksCtx = bricksCanvas.getContext('2d');
+    }
+    if (bricksCanvas.width !== w || bricksCanvas.height !== h) {
+        bricksCanvas.width = w;
+        bricksCanvas.height = h;
+    }
+}
+
+/**
+ * Кирпичи рисуются в offscreen при неизменном `revision` (размер карты, биом, набор кирпичей).
+ * @param {number} mapWidth
+ * @param {number} mapHeight
+ * @param {number} bricksDrawRevision — `world.bricksDrawRevision`, инкремент при мутации массива
+ */
+export function drawBricks(ctx, bricks, biome, mapWidth, mapHeight, bricksDrawRevision) {
+    const key = `${bricksDrawRevision}|${biome}|${mapWidth}|${mapHeight}|${bricks.length}`;
+    if (key !== bricksCacheKey || bricksCanvas?.width !== mapWidth || bricksCanvas?.height !== mapHeight) {
+        bricksCacheKey = key;
+        ensureBricksCanvas(mapWidth, mapHeight);
+        bricksCtx.clearRect(0, 0, mapWidth, mapHeight);
+        const fillStyle = biome === 1 ? '#aaa' : '#8b4513';
+        bricksCtx.fillStyle = fillStyle;
+        for (const b of bricks) {
+            bricksCtx.fillRect(b.x, b.y, BRICK_SIZE - 1, BRICK_SIZE - 1);
+        }
+    }
+    ctx.drawImage(bricksCanvas, 0, 0);
 }
 
 export function drawBoostIcon(ctx, x, y, type) {

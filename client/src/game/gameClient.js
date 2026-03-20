@@ -375,6 +375,8 @@ function loop(ts) {
         explosions,
         rockets,
         cachedPatterns,
+        bricksDrawRevision: world.bricksDrawRevision,
+        frameTimeMs: ts,
         onRocketSmoke: (rx, ry) => spawnParticles(rx, ry, '#888', 1, 'smoke'),
     });
     camX = cam.camX;

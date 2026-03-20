@@ -13,7 +13,7 @@ import {
     ROCKET_FLIGHT_TIME,
     SPAWN_IMMUNITY_TIME,
 } from '../config/constants.js';
-import { battle, level, session, world } from '../game/gameState.js';
+import { battle, bumpBricksDrawRevision, level, session, world } from '../game/gameState.js';
 import {
     audioCtx,
     initAudio,
@@ -132,6 +132,7 @@ function handleStart(d: Record<string, unknown>) {
         level.biome = map.biome;
         level.mapWidth = map.w;
         level.mapHeight = map.h;
+        bumpBricksDrawRevision();
     }
     gameMessageHooks.startGameClient();
 }
@@ -226,10 +227,12 @@ function handleExplosionEvent(d: Record<string, unknown>) {
     gameMessageHooks.createExplosion(d.x as number, d.y as number, d.radius as number);
     const destroyedBricks = d.destroyedBricks as { x: number; y: number }[] | undefined;
     if (destroyedBricks && destroyedBricks.length > 0) {
+        let bricksRemoved = false;
         destroyedBricks.forEach((brick) => {
             const i = world.bricks.findIndex((b) => b.x === brick.x && b.y === brick.y);
             if (i !== -1) {
                 world.bricks.splice(i, 1);
+                bricksRemoved = true;
                 gameMessageHooks.spawnParticles(
                     brick.x + BRICK_SIZE / 2,
                     brick.y + BRICK_SIZE / 2,
@@ -238,6 +241,7 @@ function handleExplosionEvent(d: Record<string, unknown>) {
                 );
             }
         });
+        if (bricksRemoved) bumpBricksDrawRevision();
     }
     const spawnedBoosts = d.spawnedBoosts as { x: number; y: number; type: number; id: string }[] | undefined;
     if (spawnedBoosts && spawnedBoosts.length > 0) {
@@ -310,10 +314,12 @@ function handleLaunchRocket(d: Record<string, unknown>) {
 function handleBricksDestroyBatch(d: Record<string, unknown>) {
     const list = d.list as { x: number; y: number }[] | undefined;
     if (!list) return;
+    let bricksRemoved = false;
     list.forEach((brick) => {
         const i = world.bricks.findIndex((b) => b.x === brick.x && b.y === brick.y);
         if (i !== -1) {
             world.bricks.splice(i, 1);
+            bricksRemoved = true;
             gameMessageHooks.spawnParticles(
                 brick.x + BRICK_SIZE / 2,
                 brick.y + BRICK_SIZE / 2,
@@ -322,6 +328,7 @@ function handleBricksDestroyBatch(d: Record<string, unknown>) {
             );
         }
     });
+    if (bricksRemoved) bumpBricksDrawRevision();
     if (d.bulletId) {
         const bi = world.bullets.findIndex((b: WsBullet) => b.bulletId === d.bulletId);
         if (bi !== -1) world.bullets.splice(bi, 1);
@@ -345,6 +352,7 @@ function handleRestartMatch(d: Record<string, unknown>) {
         world.bricks.length = 0;
         map.bricks.forEach((b) => world.bricks.push(b));
         level.biome = map.biome;
+        bumpBricksDrawRevision();
     }
     gameMessageHooks.resetMatch();
 }

@@ -43,7 +43,7 @@ import {
     tankBrickCollisionIndex,
 } from './collision.js';
 import { addTrack, createSmokeCloud, spawnParticles } from './effects.js';
-import { battle, level, session, world } from './gameState.js';
+import { battle, bumpBricksDrawRevision, level, session, world } from './gameState.js';
 
 const {
     bricks,
@@ -341,6 +341,7 @@ export function runSimulation(dt, ctx) {
             const hx = bricks[bi].x;
             const hy = bricks[bi].y;
             bricks.splice(bi, 1);
+            bumpBricksDrawRevision();
             bullets.splice(i, 1);
             send({
                 type: ClientMsg.BRICKS_DESTROY_BATCH,

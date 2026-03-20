@@ -16,18 +16,33 @@ const contentTypes: Record<string, string> = {
     '.woff2': 'font/woff2',
 };
 
+type ServeFileOptions = {
+    req?: IncomingMessage;
+    /** Заголовок Cache-Control для ответа 200/304 */
+    cacheControl?: string;
+};
+
 export function handleHttpRequest(req: IncomingMessage, res: ServerResponse): void {
     const urlPath = req.url?.split('?')[0] || '/';
 
     if (urlPath.startsWith('/assets/')) {
-        const filePath = path.join(config.staticRoot, urlPath);
-        serveFile(res, filePath);
+        // urlPath имеет ведущий "/", поэтому path.join(staticRoot, urlPath) "обнуляет" staticRoot.
+        // Убираем ведущий слэш, чтобы файл искался внутри STATIC_ROOT.
+        const filePath = path.join(config.staticRoot, urlPath.slice(1));
+        serveFile(res, filePath, {
+            req,
+            // После замены PNG/MP3 без смены URL браузер иначе долго держит старый кэш.
+            cacheControl: 'public, max-age=0, must-revalidate',
+        });
         return;
     }
 
     if (urlPath === '/' || urlPath === '/index.html') {
         const indexPath = path.join(config.staticRoot, 'index.html');
-        serveFile(res, indexPath);
+        serveFile(res, indexPath, {
+            req,
+            cacheControl: 'no-cache, must-revalidate',
+        });
         return;
     }
 
@@ -35,15 +50,49 @@ export function handleHttpRequest(req: IncomingMessage, res: ServerResponse): vo
     res.end('Not found');
 }
 
-function serveFile(res: ServerResponse, filePath: string): void {
-    fs.readFile(filePath, (err, data) => {
-        if (err) {
+function etagFromStat(stat: fs.Stats): string {
+    return `W/"${stat.mtimeMs}-${stat.size}"`;
+}
+
+function ifNoneMatchSatisfied(ifNoneMatch: string | undefined, etag: string): boolean {
+    if (!ifNoneMatch || ifNoneMatch === '*') return false;
+    return ifNoneMatch
+        .split(',')
+        .map((s) => s.trim())
+        .some((v) => v === etag);
+}
+
+function serveFile(res: ServerResponse, filePath: string, options?: ServeFileOptions): void {
+    const req = options?.req;
+    const cacheControl = options?.cacheControl ?? 'no-cache, must-revalidate';
+
+    fs.stat(filePath, (statErr, stat) => {
+        if (statErr || !stat.isFile()) {
             res.writeHead(404);
             res.end('File not found');
             return;
         }
-        const ext = path.extname(filePath);
-        res.writeHead(200, { 'Content-Type': contentTypes[ext] || 'application/octet-stream' });
-        res.end(data);
+
+        const etag = etagFromStat(stat);
+        if (ifNoneMatchSatisfied(req?.headers['if-none-match'], etag)) {
+            res.writeHead(304, { ETag: etag, 'Cache-Control': cacheControl });
+            res.end();
+            return;
+        }
+
+        fs.readFile(filePath, (readErr, data) => {
+            if (readErr) {
+                res.writeHead(404);
+                res.end('File not found');
+                return;
+            }
+            const ext = path.extname(filePath);
+            res.writeHead(200, {
+                'Content-Type': contentTypes[ext] || 'application/octet-stream',
+                ETag: etag,
+                'Cache-Control': cacheControl,
+            });
+            res.end(data);
+        });
     });
 }

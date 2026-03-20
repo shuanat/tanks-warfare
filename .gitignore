@@ -5,3 +5,7 @@ server/dist/
 .env
 *.log
 .DS_Store
+.k8s-deploy/
+
+# Локальные следы расследований (могут содержать URL прод/стейджа из браузера)
+investigation/

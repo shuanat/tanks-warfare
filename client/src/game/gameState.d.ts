@@ -80,8 +80,11 @@ export type TankEngineHandle = {
     update: (dt: number, throttle: number, brake: number) => void;
 };
 
+export function bumpBricksDrawRevision(): void;
+
 export const world: {
     bricks: WorldBrick[];
+    bricksDrawRevision: number;
     bullets: WorldBullet[];
     particles: unknown[];
     tracks: unknown[];

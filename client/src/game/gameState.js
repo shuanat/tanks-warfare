@@ -7,6 +7,8 @@ import { MAP_HEIGHT, MAP_WIDTH, TANK_MAX_HP } from '../config/constants.js';
 /** Сущности на карте и эффекты (2.2a). */
 export const world = {
     bricks: [],
+    /** Счётчик для инвалидации offscreen-кэша кирпичей в `drawBricks`. */
+    bricksDrawRevision: 0,
     bullets: [],
     particles: [],
     tracks: [],
@@ -16,6 +18,11 @@ export const world = {
     rockets: [],
     explosions: [],
 };
+
+/** Вызывать при любой мутации `world.bricks` (загрузка карты, splice, очистка). */
+export function bumpBricksDrawRevision() {
+    world.bricksDrawRevision++;
+}
 
 /** Локальный танк игрока, враги, счёт (2.2b). */
 export const battle = {

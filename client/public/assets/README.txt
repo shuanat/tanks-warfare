@@ -1,9 +1,6 @@
-Положите сюда каталоги images/ и sounds/ как на сервере:
-  assets/images/grass_base.png
-  assets/sounds/shoot.mp3
-и т.д.
+Игровые PNG и MP3 лежат в client/src/game-assets/ и подключаются через import … ?url
+в client/src/lib/assets.js — Vite кладёт их в dist при npm run build.
 
-Содержимое public/ копируется в корень dist при npm run build.
+Папка public/assets/ оставлена для подсказок; отдельно копировать файлы на сервер не нужно.
 
-При dev (Vite :5173) запросы /assets/* проксируются на Node (см. client/vite.config.js).
-Если папки нет — положите ассеты сюда ИЛИ соберите dist с ассетами и отдавайте их с сервера (STATIC_ROOT).
+При dev (Vite) ассеты отдаются тем же dev-сервером по URL из сборки (не через /assets/*).
